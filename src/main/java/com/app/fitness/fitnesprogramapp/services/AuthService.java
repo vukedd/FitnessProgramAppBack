@@ -2,6 +2,7 @@ package com.app.fitness.fitnesprogramapp.services;
 
 import com.app.fitness.fitnesprogramapp.dtos.auth.UserRegisterRequestDto;
 import com.app.fitness.fitnesprogramapp.dtos.auth.UserRegisterResponseDto;
+import com.app.fitness.fitnesprogramapp.exceptions.RegisterException;
 import com.app.fitness.fitnesprogramapp.models.user.User;
 import com.app.fitness.fitnesprogramapp.repositories.auth.AuthRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,11 +16,11 @@ public class AuthService {
 
     public UserRegisterResponseDto sendUserRegisterRequest(UserRegisterRequestDto registerRequest) {
         if (userRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
-            return new UserRegisterResponseDto(-1L, "Entered Email is already taken!", "", "", "", "", "");
+            throw new RegisterException("E-mail is already in use!", RegisterException.ErrorType.EMAIL_ALREADY_IN_USE);
         }
 
         if (userRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
-            return new UserRegisterResponseDto(-1L, "Entered Username is already taken!", "", "", "", "", "");
+            throw new RegisterException("Username is already in use!", RegisterException.ErrorType.USERNAME_ALREADY_IN_USE);
         }
 
         User user = User.builder().username(registerRequest.getUsername()).email(registerRequest.getEmail()).password(registerRequest.getPassword())
