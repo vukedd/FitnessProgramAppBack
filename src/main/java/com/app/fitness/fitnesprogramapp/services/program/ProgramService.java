@@ -5,6 +5,8 @@ import com.app.fitness.fitnesprogramapp.models.program.Program;
 import com.app.fitness.fitnesprogramapp.repositories.program.ProgramRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,9 +31,8 @@ public class ProgramService {
 //                .orElseThrow(() -> new RuntimeException("Image not found"));
 //    }
 
-    public List<ProgramOverviewDTO> getAllPrograms() {
-        return programRepository.findAll().stream()
-                .map(ProgramOverviewDTO::fromEntity)
-                .collect(Collectors.toList());
+    public Page<ProgramOverviewDTO> getAllPrograms(Pageable pageable) {
+        Page<Program> programPage = programRepository.findAll(pageable);
+        return programPage.map(ProgramOverviewDTO::fromEntity);
     }
 }
