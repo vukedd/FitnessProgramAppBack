@@ -1,4 +1,4 @@
-package com.app.fitness.fitnesprogramapp.dtos.auth.register;
+package com.app.fitness.fitnesprogramapp.dtos.register;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

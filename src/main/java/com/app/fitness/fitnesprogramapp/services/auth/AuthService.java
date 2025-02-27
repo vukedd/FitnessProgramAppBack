@@ -1,4 +1,4 @@
-package com.app.fitness.fitnesprogramapp.services;
+package com.app.fitness.fitnesprogramapp.services.auth;
 
 import com.app.fitness.fitnesprogramapp.dtos.auth.AuthenticationRequestDto;
 import com.app.fitness.fitnesprogramapp.dtos.auth.AuthenticationResponseDto;

@@ -1,4 +1,4 @@
-package com.app.fitness.fitnesprogramapp.exceptions;
+package com.app.fitness.fitnesprogramapp.exceptions.customExceptions;
 
 import lombok.Getter;
 

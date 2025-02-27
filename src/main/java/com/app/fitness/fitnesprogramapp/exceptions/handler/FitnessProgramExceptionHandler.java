@@ -1,12 +1,11 @@
-package com.app.fitness.fitnesprogramapp.exceptions;
+package com.app.fitness.fitnesprogramapp.exceptions.handler;
 
 import com.app.fitness.fitnesprogramapp.dtos.ErrorResponseDto;
+import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.RegisterException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
-import static com.app.fitness.fitnesprogramapp.exceptions.LoginException.ErrorType.INVALID_CREDENTIALS;
 
 @ControllerAdvice
 public class FitnessProgramExceptionHandler {
