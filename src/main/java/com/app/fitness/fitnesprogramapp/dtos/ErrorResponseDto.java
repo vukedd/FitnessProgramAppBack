@@ -1,4 +1,4 @@
-package com.app.fitness.fitnesprogramapp.dtos.auth;
+package com.app.fitness.fitnesprogramapp.dtos;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

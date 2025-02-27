@@ -1,20 +1,14 @@
-package com.app.fitness.fitnesprogramapp.exceptions;
+package com.app.fitness.fitnesprogramapp.exceptions.handler;
 
-import com.app.fitness.fitnesprogramapp.dtos.auth.ErrorResponseDto;
+import com.app.fitness.fitnesprogramapp.dtos.ErrorResponseDto;
+import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.RegisterException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.View;
 
 @ControllerAdvice
 public class FitnessProgramExceptionHandler {
-
-    private final View error;
-
-    public FitnessProgramExceptionHandler(View error) {
-        this.error = error;
-    }
 
     @ExceptionHandler(RegisterException.class)
     public ResponseEntity<ErrorResponseDto> handleRegisterException(RegisterException ex) {
