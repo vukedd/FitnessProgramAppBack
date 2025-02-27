@@ -1,4 +1,4 @@
-package com.app.fitness.fitnesprogramapp.dtos.auth;
+package com.app.fitness.fitnesprogramapp.dtos.auth.register;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,16 +11,13 @@ public class UserRegisterResponseDto {
     private String username;
     private String email;
     private String password;
-    private String firstName;
-    private String lastName;
 
-    public UserRegisterResponseDto(Long id, String message, String username, String email, String password, String firstName, String lastName) {
+    public UserRegisterResponseDto(Long id, String message, String username, String email, String password) {
         this.id = id;
         this.message = message;
         this.username = username;
         this.email = email;
         this.password = password;
-        this.firstName = firstName;
-        this.lastName = lastName;
+
     }
 }
