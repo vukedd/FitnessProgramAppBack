@@ -28,4 +28,10 @@ public class User {
 
     @Column(name = "lastname", nullable = false)
     private String lastName;
+
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled;
+
+    @Column(name = "verificationToken", nullable = true)
+    private String verificationToken;
 }

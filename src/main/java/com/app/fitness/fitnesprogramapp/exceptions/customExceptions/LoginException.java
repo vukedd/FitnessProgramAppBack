@@ -7,7 +7,7 @@ public class LoginException extends RuntimeException {
     private final LoginException.ErrorType errorType;
 
     public enum ErrorType {
-        INVALID_CREDENTIALS
+        NOT_VERIFIED
     }
 
     public LoginException(String message, LoginException.ErrorType errorType) {
