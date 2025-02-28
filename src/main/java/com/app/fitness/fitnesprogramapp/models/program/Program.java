@@ -43,4 +43,10 @@ public class Program {
         }
         return 0.0;
     }
+
+    @OneToMany
+    @JoinTable(
+            inverseJoinColumns = @JoinColumn(name = "week_id")
+    )
+    private List<Week> weeks;
 }
