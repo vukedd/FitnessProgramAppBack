@@ -1,10 +1,10 @@
-INSERT INTO users(id,username, password, firstname, lastname, email) VALUES(4,"admin", "admin", "admin", "adminkovic", "admin@mail.com");
+INSERT INTO users(id,username, password, firstname, lastname, email, enabled) VALUES(4,"admin", "admin", "admin", "adminkovic", "admin@mail.com", false);
 -- First, insert sample users
-INSERT INTO users (id,username, password, firstname, lastname, email)
+INSERT INTO users (id,username, password, firstname, lastname, email, enabled)
 VALUES
-    (1, 'john_doe','sifra','john','doe', 'john@example.com'),
-    (2, 'jane_smith','sifra','jane','smith', 'jane@example.com'),
-    (3, 'mike_wilson','sifra','mike','wilson', 'mike@example.com');
+    (1, 'john_doe','sifra','john','doe', 'john@example.com', false),
+    (2, 'jane_smith','sifra','jane','smith', 'jane@example.com', false),
+    (3, 'mike_wilson','sifra','mike','wilson', 'mike@example.com', false);
 
 -- Then, insert programs with sample image data
 -- Note: Using HEXTORAW for binary data, though actual images would have much more data
