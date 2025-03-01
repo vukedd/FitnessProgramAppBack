@@ -28,6 +28,44 @@ VALUES
 
     (5, 'Program 5',
      x'89504E470D0A1A0A',
+     3,5000),
+    (6, 'Program 6',
+     x'89504E470D0A1A0A', -- This is a minimal PNG header
+     1,1000),
+
+    (7, 'Program 7',
+     x'474946383961', -- This is a minimal GIF header
+     1,2000),
+
+    (8, 'Program 8',
+     x'89504E470D0A1A0A',
+     2,3000),
+
+    (9, 'Program 9',
+     x'474946383961',
+     2,4000),
+
+    (10, 'Program 10',
+     x'89504E470D0A1A0A',
+     3,5000),
+    (11, 'Program 11',
+     x'89504E470D0A1A0A', -- This is a minimal PNG header
+     1,1000),
+
+    (12, 'Program 12',
+     x'474946383961', -- This is a minimal GIF header
+     1,2000),
+
+    (13, 'Program 13',
+     x'89504E470D0A1A0A',
+     2,3000),
+
+    (14, 'Program 14',
+     x'474946383961',
+     2,4000),
+
+    (15, 'Program 15',
+     x'89504E470D0A1A0A',
      3,5000);
 
 -- Reset auto-increment
@@ -44,3 +82,9 @@ insert into program_reviews(program_id,review_id) values
                                                       (1,42),
                                                       (2,43),
                                                       (2,44);
+insert into volume_metric(id,is_range,title,metric_symbol) values
+                                                                                            (1,false,'Reps','reps'),
+                                                                                            (2,true,'Reps Range','reps');
+insert into intensity_metric(id,minimum_intensity,maximum_intensity,title,metric_symbol,is_range) values
+                                                                                            (1,true,false,'Rpe','rpe',false),
+                                                                                            (2,true,true,'Rpe Range','rpe',true);
