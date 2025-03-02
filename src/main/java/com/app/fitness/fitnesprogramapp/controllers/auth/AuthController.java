@@ -20,4 +20,15 @@ public class AuthController {
             @RequestBody AuthenticationRequestDto authenticationRequestDto) {
         return ResponseEntity.ok(authService.authenticate(authenticationRequestDto));
     }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthenticationResponseDto> refreshToken(@RequestParam Long refreshTokenId) {
+        return ResponseEntity.ok(authService.refreshToken(refreshTokenId));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> revokeToken(@RequestParam Long refreshTokenId) {
+        authService.revokeRefreshToken(refreshTokenId);
+        return ResponseEntity.noContent().build();
+    }
 }
