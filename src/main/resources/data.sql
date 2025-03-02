@@ -83,8 +83,12 @@ insert into program_reviews(program_id,review_id) values
                                                       (2,43),
                                                       (2,44);
 insert into volume_metric(id,is_range,title,metric_symbol) values
-                                                                                            (1,false,'Reps','reps'),
+                                                                                            (1,true,'Reps','reps'),
                                                                                             (2,true,'Reps Range','reps');
 insert into intensity_metric(id,minimum_intensity,maximum_intensity,title,metric_symbol,is_range) values
                                                                                             (1,true,false,'Rpe','rpe',false),
                                                                                             (2,true,true,'Rpe Range','rpe',true);
+insert into exercise(id,title,description) values
+                                               (1,'Ez bar curl','curl description'),
+                                               (2,'Leg extension','extension description'),
+                                               (3,'Let curls','leg curls extension');

@@ -18,6 +18,7 @@ public class Program {
 
     @Lob
     @Column(length = 1000000)
+    @Basic(fetch = FetchType.LAZY)
     private byte[] imageData;
 
     @ManyToOne
