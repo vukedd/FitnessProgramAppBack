@@ -3,6 +3,7 @@ package com.app.fitness.fitnesprogramapp.exceptions.handler;
 import com.app.fitness.fitnesprogramapp.dtos.ErrorResponseDto;
 import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.LoginException;
 import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.RegisterException;
+import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.ValidationException;
 import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.VerificationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -65,6 +66,24 @@ public class FitnessProgramExceptionHandler {
             case NOT_VERIFIED:
                 status = HttpStatus.FORBIDDEN;
                 errorMessage = "Account is not verified!";
+                break;
+            default:
+                status = HttpStatus.INTERNAL_SERVER_ERROR;
+                errorMessage = "Internal server error";
+                break;
+        }
+
+        return new ResponseEntity<>(new ErrorResponseDto(errorMessage, ex.getErrorType().name()), status);
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ErrorResponseDto> handleValidationException(ValidationException ex) {
+        HttpStatus status;
+        String errorMessage = "";
+        switch (ex.getErrorType()) {
+            case BAD_REQUEST:
+                status = HttpStatus.BAD_REQUEST;
+                errorMessage = "Invalid token!";
                 break;
             default:
                 status = HttpStatus.INTERNAL_SERVER_ERROR;

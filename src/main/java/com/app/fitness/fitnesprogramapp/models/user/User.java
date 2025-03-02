@@ -1,7 +1,11 @@
 package com.app.fitness.fitnesprogramapp.models.user;
 
+import com.app.fitness.fitnesprogramapp.models.auth.RefreshToken;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name="users")
@@ -34,4 +38,7 @@ public class User {
 
     @Column(name = "verificationToken", nullable = true)
     private String verificationToken;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RefreshToken> refreshTokens = new ArrayList<>();
 }
