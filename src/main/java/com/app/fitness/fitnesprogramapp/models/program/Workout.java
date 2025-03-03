@@ -20,5 +20,5 @@ public class Workout {
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "workout_exercise_id")
     )
-    private List<Workout> workoutExercises;
+    private List<WorkoutExercise> workoutExercises;
 }
