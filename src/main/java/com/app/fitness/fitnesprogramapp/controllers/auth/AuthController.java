@@ -2,6 +2,7 @@ package com.app.fitness.fitnesprogramapp.controllers.auth;
 
 import com.app.fitness.fitnesprogramapp.dtos.auth.AuthenticationRequestDto;
 import com.app.fitness.fitnesprogramapp.dtos.auth.AuthenticationResponseDto;
+import com.app.fitness.fitnesprogramapp.dtos.auth.RefreshTokenRequest;
 import com.app.fitness.fitnesprogramapp.services.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,8 +23,8 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<AuthenticationResponseDto> refreshToken(@RequestParam Long refreshTokenId) {
-        return ResponseEntity.ok(authService.refreshToken(refreshTokenId));
+    public ResponseEntity<AuthenticationResponseDto> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        return ResponseEntity.ok(authService.refreshToken(refreshTokenRequest.getRefreshTokenId()));
     }
 
     @PostMapping("/logout")

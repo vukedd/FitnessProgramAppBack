@@ -41,7 +41,7 @@ public class RegisterService {
         String confirmationUrl = "http://localhost:8080/api/auth/verify-email?token=" + token;
         emailService.sendEmail(user.getEmail(), "Email Verification", "Click the following link to verify your email: \n" + confirmationUrl);
 
-        return new UserRegisterResponseDto(user.getId(), "User successfully registered!", user.getUsername(), user.getEmail(), user.getPassword());
+        return new UserRegisterResponseDto(user.getId(), "User successfully registered! We have sent a verification code to your email!", user.getUsername(), user.getEmail(), user.getPassword());
     }
 
     public UserVerificationResponseDto validateVerificationToken(String token) {

@@ -65,7 +65,7 @@ public class FitnessProgramExceptionHandler {
         switch (ex.getErrorType()) {
             case NOT_VERIFIED:
                 status = HttpStatus.FORBIDDEN;
-                errorMessage = "Account is not verified!";
+                errorMessage = "Account is not verified! A verification link has been sent to your email after the registration!";
                 break;
             default:
                 status = HttpStatus.INTERNAL_SERVER_ERROR;
