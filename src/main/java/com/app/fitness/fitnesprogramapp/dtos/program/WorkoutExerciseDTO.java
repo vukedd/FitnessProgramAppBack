@@ -9,5 +9,5 @@ public class WorkoutExerciseDTO {
     private Long exercise; // Exercise ID
     private int minimumRestTime;
     private int maximumRestTime;
-    private List<WorkoutExerciseSetDTO> workoutExerciseSets;
+    private List<WorkoutExerciseSetDTO> sets;
 }

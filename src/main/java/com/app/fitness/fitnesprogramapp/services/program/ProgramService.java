@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -276,7 +275,7 @@ public class ProgramService {
 
         // Create sets
         List<Set> sets = new ArrayList<>();
-        for (WorkoutExerciseSetDTO setDTO : exerciseDTO.getWorkoutExerciseSets()) {
+        for (WorkoutExerciseSetDTO setDTO : exerciseDTO.getSets()) {
             Set set = createWorkoutExerciseSet(
                     setDTO
             );
