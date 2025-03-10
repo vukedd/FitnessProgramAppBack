@@ -24,7 +24,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/programs")
 @RequiredArgsConstructor
-@CrossOrigin
+@CrossOrigin("http://localhost:4200/")
 public class ProgramController {
     private final ProgramService programService;
     private final UserService userService;
@@ -35,6 +35,7 @@ public class ProgramController {
         Page<ProgramOverviewDTO> programs = programService.getAllProgramsOverview(programsPage);
         return ResponseEntity.ok(programs);
     }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createProgram(
             @RequestPart("program") String programJson,
