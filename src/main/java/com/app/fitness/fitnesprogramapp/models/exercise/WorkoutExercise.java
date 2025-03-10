@@ -1,6 +1,6 @@
-package com.app.fitness.fitnesprogramapp.models.program;
+package com.app.fitness.fitnesprogramapp.models.exercise;
 
-import com.app.fitness.fitnesprogramapp.models.exercise.Exercise;
+import com.app.fitness.fitnesprogramapp.models.set.Set;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -22,5 +22,8 @@ public class WorkoutExercise {
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "set_id")
     )
-    private List<WorkoutExerciseSet> workoutExerciseSets;
+    private List<Set> sets;
+
+    private int minimumRestTime;
+    private int maximumRestTime;
 }

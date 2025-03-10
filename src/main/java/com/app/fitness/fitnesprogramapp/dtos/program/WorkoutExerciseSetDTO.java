@@ -4,10 +4,10 @@ import lombok.Data;
 
 @Data
 public class WorkoutExerciseSetDTO {
-    private Integer volumeMin;
-    private Integer volumeMax;
+    private int volumeMin;
+    private int volumeMax;
     private Long volumeMetric;
     private Long intensityMetric;
-    private Integer intensityMin;
-    private Integer intensityMax;
+    private int intensityMin;
+    private int intensityMax;
 }

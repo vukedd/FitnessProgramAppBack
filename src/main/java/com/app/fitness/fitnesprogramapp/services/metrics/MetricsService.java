@@ -2,8 +2,8 @@ package com.app.fitness.fitnesprogramapp.services.metrics;
 
 import com.app.fitness.fitnesprogramapp.dtos.metrics.IntensityMetricDto;
 import com.app.fitness.fitnesprogramapp.dtos.metrics.VolumeMetricDto;
-import com.app.fitness.fitnesprogramapp.models.program.IntensityMetric;
-import com.app.fitness.fitnesprogramapp.models.program.VolumeMetric;
+import com.app.fitness.fitnesprogramapp.models.set.IntensityMetric;
+import com.app.fitness.fitnesprogramapp.models.set.VolumeMetric;
 import com.app.fitness.fitnesprogramapp.repositories.metrics.IntensityMetricRepository;
 import com.app.fitness.fitnesprogramapp.repositories.metrics.VolumeMetricRepository;
 import lombok.RequiredArgsConstructor;

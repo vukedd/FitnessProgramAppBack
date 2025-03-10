@@ -1,11 +1,12 @@
-package com.app.fitness.fitnesprogramapp.models.program;
+package com.app.fitness.fitnesprogramapp.models.set;
 
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
 @Data
-public class WorkoutExerciseSet {
+@Table(name="sets")
+public class Set {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -14,7 +15,7 @@ public class WorkoutExerciseSet {
     private SetVolume volume;
 
     @Embedded
-    private  SetIntensity intensity;
+    private SetIntensity intensity;
 
     @ManyToOne
     private VolumeMetric volumeMetric;

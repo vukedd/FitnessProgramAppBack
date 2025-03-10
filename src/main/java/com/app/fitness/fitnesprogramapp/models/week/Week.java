@@ -1,5 +1,6 @@
-package com.app.fitness.fitnesprogramapp.models.program;
+package com.app.fitness.fitnesprogramapp.models.week;
 
+import com.app.fitness.fitnesprogramapp.models.workout.Workout;
 import jakarta.persistence.*;
 import lombok.Data;
 
