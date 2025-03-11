@@ -1,6 +1,8 @@
 package com.app.fitness.fitnesprogramapp.models.user;
 
 import com.app.fitness.fitnesprogramapp.models.auth.RefreshToken;
+import com.app.fitness.fitnesprogramapp.models.program.Program;
+import com.app.fitness.fitnesprogramapp.models.program.StartedProgram;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -41,4 +43,10 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RefreshToken> refreshTokens = new ArrayList<>();
+
+    @OneToMany
+    @JoinTable(
+            inverseJoinColumns = @JoinColumn(name = "started_program_id")
+    )
+    private List<StartedProgram> startedPrograms = new ArrayList<>();
 }

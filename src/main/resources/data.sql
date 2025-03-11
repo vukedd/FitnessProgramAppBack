@@ -8,65 +8,23 @@ VALUES
 
 -- Then, insert programs with sample image data
 -- Note: Using HEXTORAW for binary data, though actual images would have much more data
-INSERT INTO program (id, name, image_data, creator_id,followers_number)
-VALUES
-    (1, 'Program 1',
-     x'89504E470D0A1A0A', -- This is a minimal PNG header
-     1,1000),
-
-    (2, 'Program 2',
-     x'474946383961', -- This is a minimal GIF header
-     1,2000),
-
-    (3, 'Program 3',
-     x'89504E470D0A1A0A',
-     2,3000),
-
-    (4, 'Program 4',
-     x'474946383961',
-     2,4000),
-
-    (5, 'Program 5',
-     x'89504E470D0A1A0A',
-     3,5000),
-    (6, 'Program 6',
-     x'89504E470D0A1A0A', -- This is a minimal PNG header
-     1,1000),
-
-    (7, 'Program 7',
-     x'474946383961', -- This is a minimal GIF header
-     1,2000),
-
-    (8, 'Program 8',
-     x'89504E470D0A1A0A',
-     2,3000),
-
-    (9, 'Program 9',
-     x'474946383961',
-     2,4000),
-
-    (10, 'Program 10',
-     x'89504E470D0A1A0A',
-     3,5000),
-    (11, 'Program 11',
-     x'89504E470D0A1A0A', -- This is a minimal PNG header
-     1,1000),
-
-    (12, 'Program 12',
-     x'474946383961', -- This is a minimal GIF header
-     1,2000),
-
-    (13, 'Program 13',
-     x'89504E470D0A1A0A',
-     2,3000),
-
-    (14, 'Program 14',
-     x'474946383961',
-     2,4000),
-
-    (15, 'Program 15',
-     x'89504E470D0A1A0A',
-     3,5000);
+insert into fitnessprogramapp.program (followers_number, creator_id, id, name, image_data)
+values  (1000, 1, 1, 'Program 1', 0x89504E470D0A1A0A),
+        (2000, 1, 2, 'Program 2', 0x474946383961),
+        (3000, 2, 3, 'Program 3', 0x89504E470D0A1A0A),
+        (4000, 2, 4, 'Program 4', 0x474946383961),
+        (5000, 3, 5, 'Program 5', 0x89504E470D0A1A0A),
+        (1000, 1, 6, 'Program 6', 0x89504E470D0A1A0A),
+        (2000, 1, 7, 'Program 7', 0x474946383961),
+        (3000, 2, 8, 'Program 8', 0x89504E470D0A1A0A),
+        (4000, 2, 9, 'Program 9', 0x474946383961),
+        (5000, 3, 10, 'Program 10', 0x89504E470D0A1A0A),
+        (1000, 1, 11, 'Program 11', 0x89504E470D0A1A0A),
+        (2000, 1, 12, 'Program 12', 0x474946383961),
+        (3000, 2, 13, 'Program 13', 0x89504E470D0A1A0A),
+        (4000, 2, 14, 'Program 14', 0x474946383961),
+        (5000, 3, 15, 'Program 15', 0x89504E470D0A1A0A),
+        (0, 1, 16, 'asdfas', null);
 
 -- Reset auto-increment
 ALTER TABLE program AUTO_INCREMENT = 6;
@@ -83,11 +41,11 @@ insert into program_reviews(program_id,review_id) values
                                                       (2,43),
                                                       (2,44);
 insert into volume_metric(id,is_range,title,metric_symbol) values
-                                                                                            (1,true,'Reps','reps'),
+                                                                                            (1,false,'Reps','reps'),
                                                                                             (2,true,'Reps Range','reps');
 insert into intensity_metric(id,minimum_intensity,maximum_intensity,title,metric_symbol,is_range) values
-                                                                                            (1,true,false,'Rpe','rpe',false),
-                                                                                            (2,true,true,'Rpe Range','rpe',true);
+                                                                                            (1,0,10,'Rpe','rpe',false),
+                                                                                            (2,0,10,'Rpe Range','rpe',true);
 insert into exercise(id,title,description) values
                                                (1,'Ez bar curl','curl description'),
                                                (2,'Leg extension','extension description'),

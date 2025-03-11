@@ -1,6 +1,6 @@
-package com.app.fitness.fitnesprogramapp.repositories.program;
+package com.app.fitness.fitnesprogramapp.repositories.week;
 
-import com.app.fitness.fitnesprogramapp.models.program.Week;
+import com.app.fitness.fitnesprogramapp.models.week.Week;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WeekRepository extends JpaRepository<Week, Long> {

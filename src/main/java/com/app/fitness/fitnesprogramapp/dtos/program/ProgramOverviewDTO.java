@@ -15,6 +15,7 @@ public class ProgramOverviewDTO {
     private String creatorUsername;
     private int followersNumber;
     private Double rating;
+    private Long startedProgramId;
 
     public static ProgramOverviewDTO fromEntity(Program program) {
         return new ProgramOverviewDTO(
@@ -23,7 +24,19 @@ public class ProgramOverviewDTO {
                 program.getImageData(),
                 program.getCreator().getUsername(),
                 program.getFollowersNumber(),
-                program.getRating()
+                program.getRating(),
+                null
+        );
+    }
+    public static ProgramOverviewDTO fromEntity(Program program,Long startedProgramId) {
+        return new ProgramOverviewDTO(
+                program.getId(),
+                program.getName(),
+                program.getImageData(),
+                program.getCreator().getUsername(),
+                program.getFollowersNumber(),
+                program.getRating(),
+                startedProgramId
         );
     }
 }

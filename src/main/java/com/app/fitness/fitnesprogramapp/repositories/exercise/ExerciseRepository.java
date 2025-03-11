@@ -1,4 +1,4 @@
-package com.app.fitness.fitnesprogramapp.repositories.program;
+package com.app.fitness.fitnesprogramapp.repositories.exercise;
 
 import com.app.fitness.fitnesprogramapp.models.exercise.Exercise;
 import org.springframework.data.jpa.repository.JpaRepository;

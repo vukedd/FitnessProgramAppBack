@@ -2,11 +2,10 @@ package com.app.fitness.fitnesprogramapp.services.program;
 
 import com.app.fitness.fitnesprogramapp.dtos.exercise.ExerciseOverviewDto;
 import com.app.fitness.fitnesprogramapp.models.exercise.Exercise;
-import com.app.fitness.fitnesprogramapp.repositories.program.ExerciseRepository;
+import com.app.fitness.fitnesprogramapp.repositories.exercise.ExerciseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 

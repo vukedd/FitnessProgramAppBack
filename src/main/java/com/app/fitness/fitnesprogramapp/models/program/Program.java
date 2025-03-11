@@ -2,6 +2,7 @@ package com.app.fitness.fitnesprogramapp.models.program;
 
 import com.app.fitness.fitnesprogramapp.models.review.Review;
 import com.app.fitness.fitnesprogramapp.models.user.User;
+import com.app.fitness.fitnesprogramapp.models.week.Week;
 import jakarta.persistence.*;
 import lombok.Data;
 

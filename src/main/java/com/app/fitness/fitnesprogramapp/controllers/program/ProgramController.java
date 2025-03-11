@@ -2,6 +2,11 @@ package com.app.fitness.fitnesprogramapp.controllers.program;
 
 import com.app.fitness.fitnesprogramapp.dtos.program.ProgramCreateDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.ProgramOverviewDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.currentworkout.CurrentWorkoutDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.details.ProgramDetailsDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHistoryDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHistoryResponseDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.startprogram.StartProgramResponseDTO;
 import com.app.fitness.fitnesprogramapp.models.program.Program;
 import com.app.fitness.fitnesprogramapp.services.program.ProgramService;
 import com.app.fitness.fitnesprogramapp.services.user.UserService;
@@ -17,7 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.Optional;
 
@@ -41,7 +46,7 @@ public class ProgramController {
             @RequestPart("program") String programJson,
             @RequestPart(value = "image", required = false) MultipartFile image,
             Authentication authentication) {
-        try {
+
             // Get current authenticated user
             //String username = authentication.getName();
             ProgramCreateDTO programDTO = programService.convertJsonToDTO(programJson);
@@ -52,32 +57,49 @@ public class ProgramController {
             // Return the created program ID
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("id", createdProgram.getId(), "message", "Program created successfully"));
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Error processing image file: " + e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error creating program: " + e.getMessage()));
-        }
+
     }
 
+    @PostMapping("/start-program/{programId}")
+    public ResponseEntity<StartProgramResponseDTO> startProgram(
+        @PathVariable Long programId,
+        Authentication authentication
+    )
+    {
+//        String username = authentication.getName();
+        return ResponseEntity.ok(programService.startProgram(programId,"john_doe"));
+    }
+
+    @GetMapping("/started")
+    public ResponseEntity<Page<ProgramOverviewDTO>> getStartedPrograms(Authentication authentication,
+                                                                       @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage) {
+//        String username = authentication.getName();
+        return ResponseEntity.ok(programService.getStartedProgramsOverview(programsPage,"john_doe"));
+
+    }
+
+
+
+//    @PostMapping("/history/exercise")
+//    public ResponseEntity<CreateExerciseHistoryResponseDTO> createExerciseHistory(@RequestBody CreateExerciseHistoryDTO createExerciseHistoryDTO, Authentication authentication) {
+//        //String username = authentication.getName();
+//        return ResponseEntity.ok(programService.createExerciseHistory("john_doe",createExerciseHistoryDTO));
+//    }
+//
+//    @GetMapping("/current-workout/{workoutId}")
+//    public ResponseEntity<CurrentWorkoutDTO> getCurrentWorkout(@PathVariable Long workoutId){
+//        return ResponseEntity.ok(programService.getCurrentWorkout(workoutId));
+//    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<Program> getProgramById(@PathVariable Long id) {
-        Optional<Program> program = programService.getProgramById(id);
-        return program.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ProgramDetailsDTO> getProgramById(@PathVariable Long id) {
+        //add authentication here
+        ProgramDetailsDTO program = programService.getProgramDetails(id);
+        return ResponseEntity.ok(program);
     }
 
     @GetMapping("/{id}/image")
     public ResponseEntity<byte[]> getProgramImage(@PathVariable Long id) {
-        Optional<Program> programOpt = programService.getProgramById(id);
-        if (programOpt.isPresent() && programOpt.get().getImageData() != null) {
-            byte[] imageData = programOpt.get().getImageData();
-            return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_JPEG) // or determine dynamically
-                    .body(imageData);
-        }
-        return ResponseEntity.notFound().build();
-
+        return ResponseEntity.ok(programService.getProgramImage(id));
     }
 }
