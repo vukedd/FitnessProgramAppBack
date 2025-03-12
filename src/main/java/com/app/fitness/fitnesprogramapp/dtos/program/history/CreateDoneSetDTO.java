@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class CreateDoneSetDTO {
+    private Long startedWorkoutId;
     private Long workoutExerciseId;
     private Long setId;
     private int volume;

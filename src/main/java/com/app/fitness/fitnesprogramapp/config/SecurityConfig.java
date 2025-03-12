@@ -17,40 +17,40 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-//    @Bean
-//    public SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
-//        return http.cors().and().csrf(AbstractHttpConfigurer::disable)
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/auth/**").permitAll().anyRequest().authenticated()
-//                )
-//                .sessionManagement(session ->
-//                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-//                .oauth2ResourceServer(server -> server
-//                        .jwt(Customizer.withDefaults())
-//                        .authenticationEntryPoint(
-//                                new BearerTokenAuthenticationEntryPoint())
-//                        .accessDeniedHandler(
-//                                new BearerTokenAccessDeniedHandler())
-//                )
-//                .build();
-//    }
-@Bean
-public SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
-    return http.csrf(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("**").permitAll().anyRequest().authenticated()
-            )
-            .sessionManagement(session ->
+    @Bean
+    public SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
+        return http.cors().and().csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**","/api/programs/image/**").permitAll().anyRequest().authenticated()
+                )
+                .sessionManagement(session ->
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .oauth2ResourceServer(server -> server
-                    .jwt(Customizer.withDefaults())
-                    .authenticationEntryPoint(
-                            new BearerTokenAuthenticationEntryPoint())
-                    .accessDeniedHandler(
-                            new BearerTokenAccessDeniedHandler())
-            )
-            .build();
-}
+                .oauth2ResourceServer(server -> server
+                        .jwt(Customizer.withDefaults())
+                        .authenticationEntryPoint(
+                                new BearerTokenAuthenticationEntryPoint())
+                        .accessDeniedHandler(
+                                new BearerTokenAccessDeniedHandler())
+                )
+                .build();
+    }
+//@Bean
+//public SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
+//    return http.csrf(AbstractHttpConfigurer::disable)
+//            .authorizeHttpRequests(auth -> auth
+//                    .requestMatchers("**").permitAll().anyRequest().authenticated()
+//            )
+//            .sessionManagement(session ->
+//                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//            .oauth2ResourceServer(server -> server
+//                    .jwt(Customizer.withDefaults())
+//                    .authenticationEntryPoint(
+//                            new BearerTokenAuthenticationEntryPoint())
+//                    .accessDeniedHandler(
+//                            new BearerTokenAccessDeniedHandler())
+//            )
+//            .build();
+//}
 
     @Bean
     public AuthenticationManager authenticationManager(

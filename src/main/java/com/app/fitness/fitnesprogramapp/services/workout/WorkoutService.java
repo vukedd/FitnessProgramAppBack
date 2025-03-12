@@ -1,6 +1,8 @@
 package com.app.fitness.fitnesprogramapp.services.workout;
 
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateDoneSetDTO;
+import com.app.fitness.fitnesprogramapp.dtos.set.CompleteSetResponseDTO;
+import com.app.fitness.fitnesprogramapp.dtos.workout.CompleteWorkoutResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.workout.NextWorkoutDTO;
 import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
 import com.app.fitness.fitnesprogramapp.models.program.Program;
@@ -79,16 +81,11 @@ public class WorkoutService {
 
     /**
      * Processes a complete set request
-     * @param workoutId The started workout ID
      * @param doneSetDTO The completed set data
      * @return Updated StartedWorkout or null if not found
      */
-    public StartedWorkout processCompleteSet(Long workoutId, CreateDoneSetDTO doneSetDTO) {
-        Optional<StartedWorkout> startedWorkoutOpt = startedWorkoutRepository.findById(workoutId);
-
-        if (startedWorkoutOpt.isEmpty()) {
-            return null;
-        }
+    public DoneSet completeSet(CreateDoneSetDTO doneSetDTO) {
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(doneSetDTO.getStartedWorkoutId()).orElseThrow();
 
         DoneSet doneSet = new DoneSet();
         WorkoutExercise workoutExercise = workoutExerciseRepository.findById(doneSetDTO.getWorkoutExerciseId()).orElseThrow();
@@ -101,34 +98,12 @@ public class WorkoutService {
         doneSet.setDate(new Date());
         doneSet = doneSetRepository.save(doneSet);
 
-        StartedWorkout startedWorkout = startedWorkoutOpt.get();
-
         // Add the done set to the workout
         startedWorkout.getDoneSets().add(doneSet);
-
-        // Find the started week and program for this workout
-        StartedProgram startedProgram = findStartedProgramForWorkout(startedWorkout);
-        if (startedProgram == null) {
-            throw new IllegalStateException("Could not find program for this workout");
-        }
-
-        // Find the started week for this workout
-        Optional<StartedWeek> startedWeek =
-                startedProgram.getStartedWeeks().stream()
-                        .filter(week -> week.getStartedWorkouts().stream()
-                                .anyMatch(workout -> workout.getId().equals(startedWorkout.getId())))
-                        .findFirst();
-
-        if (startedWeek.isEmpty()) {
-            throw new IllegalStateException("Could not find week for this workout");
-        }
+        startedWorkoutRepository.save(startedWorkout);
 
         // Update workout status based on set completion
-        return completeSet(
-                startedWorkout,
-                startedWeek.get(),
-                startedProgram
-        );
+        return doneSet;
     }
 
     /**
@@ -353,52 +328,34 @@ public class WorkoutService {
         }
     }
 
-    /**
-     * Completes a set and updates the workout and week status
-     * @param startedWorkout The workout containing the completed set
-     * @param startedWeek The week containing the workout
-     * @param startedProgram The program containing the week
-     * @return Updated started workout
-     */
-    public StartedWorkout completeSet(StartedWorkout startedWorkout, StartedWeek startedWeek, StartedProgram startedProgram) {
-        // Check if all sets for this workout have been completed
-        boolean allSetsCompleted = checkAllSetsCompleted(startedWorkout);
 
-        if (allSetsCompleted) {
-            // Mark workout as finished
-            startedWorkout.setFinished(true);
-            startedWorkout.setDoneDate(new Date());
-            startedWorkoutRepository.save(startedWorkout);
+    public CompleteWorkoutResponseDTO completeWorkout(Long startedWorkoutId, Long startedProgramId) {
+       StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+       StartedProgram startedProgram = startedProgramRepository.findById(startedProgramId).orElseThrow();
+        // Find the started week for this workout
+        StartedWeek startedWeek =
+                startedProgram.getStartedWeeks().stream()
+                        .filter(week -> week.getStartedWorkouts().stream()
+                                .anyMatch(workout -> workout.getId().equals(startedWorkoutId)))
+                        .findFirst().orElseThrow();
 
-            // Check if this was the last workout in the week
-            checkWeekCompletion(startedWeek);
+        // Mark workout as finished
+        startedWorkout.setFinished(true);
+        startedWorkout.setDoneDate(new Date());
+        startedWorkout=startedWorkoutRepository.save(startedWorkout);
 
-            // Check if this was the last week in the program
-            if (startedWeek.isFinished()) {
-                checkProgramCompletion(startedProgram);
-            }
+        // Check if this was the last workout in the week
+        checkWeekCompletion(startedWeek);
+
+        // Check if this was the last week in the program
+        if (startedWeek.isFinished()) {
+            checkProgramCompletion(startedProgram);
         }
 
-        return startedWorkout;
+
+        return new CompleteWorkoutResponseDTO(startedWorkoutId,"Successfully completed workout!");
     }
 
-    /**
-     * Checks if all sets in a workout have been completed
-     * @param startedWorkout The workout to check
-     * @return true if all sets are completed, false otherwise
-     */
-    private boolean checkAllSetsCompleted(StartedWorkout startedWorkout) {
-        Workout workout = startedWorkout.getWorkout();
-        int totalSetCount = 0;
-
-        // Count total sets in the workout
-        for (var exercise : workout.getWorkoutExercises()) {
-            totalSetCount += exercise.getSets().size();
-        }
-
-        // Check if all sets have been completed
-        return startedWorkout.getDoneSets().size() >= totalSetCount;
-    }
 
     /**
      * Checks if all workouts in a week have been completed
@@ -457,23 +414,18 @@ public class WorkoutService {
     }
 
     /**
-     * Finds the started program containing a specific started workout
-     * @param startedWorkout The workout to find
-     * @return The containing started program or null if not found
+     * Uncompletes a previously completed set
+     * @param doneSetId The ID of the completed set to remove
+     * @return Response with success message
      */
-    private StartedProgram findStartedProgramForWorkout(StartedWorkout startedWorkout) {
-        // This could be more efficient with proper database queries
-        Iterable<StartedProgram> allPrograms = startedProgramRepository.findAll();
+    public CompleteSetResponseDTO uncompleteSet(Long doneSetId,Long startedWorkoutId) {
+        DoneSet doneSet = doneSetRepository.findById(doneSetId).orElseThrow();
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+        startedWorkout.getDoneSets().remove(doneSet);
+        startedWorkoutRepository.save(startedWorkout);
+        doneSetRepository.delete(doneSet);
 
-        for (StartedProgram program : allPrograms) {
-            for (StartedWeek week : program.getStartedWeeks()) {
-                if (week.getStartedWorkouts().stream()
-                        .anyMatch(workout -> workout.getId().equals(startedWorkout.getId()))) {
-                    return program;
-                }
-            }
-        }
-
-        return null;
+        return new CompleteSetResponseDTO(doneSetId, "Successfully removed completed set from workout!");
     }
+
 }

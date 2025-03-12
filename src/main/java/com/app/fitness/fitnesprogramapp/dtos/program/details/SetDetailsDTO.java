@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class WorkoutExerciseSetDetailsDTO {
+public class SetDetailsDTO {
     private Long id;
 
     private SetVolumeDetailsDTO volume;

@@ -1,4 +1,4 @@
-INSERT INTO users(id,username, password, firstname, lastname, email, enabled) VALUES(4,"admin", "admin", "admin", "adminkovic", "admin@mail.com", false);
+INSERT INTO users(id,username, password, firstname, lastname, email, enabled) VALUES(4,'admin', '$2a$10$sk586e6x3Xn/Y1ZmgQGZf.Q3MbRrt0WjZuvgFZ75YYiXtX3rsI4lW', 'admin', 'adminkovic', 'admin@mail.com', true);
 -- First, insert sample users
 INSERT INTO users (id,username, password, firstname, lastname, email, enabled)
 VALUES
@@ -8,7 +8,7 @@ VALUES
 
 -- Then, insert programs with sample image data
 -- Note: Using HEXTORAW for binary data, though actual images would have much more data
-insert into fitnessprogramapp.program (followers_number, creator_id, id, name, image_data)
+insert into fitnessprogramapp.program (followers_number, creator_id, id, title, image_data)
 values  (1000, 1, 1, 'Program 1', 0x89504E470D0A1A0A),
         (2000, 1, 2, 'Program 2', 0x474946383961),
         (3000, 2, 3, 'Program 3', 0x89504E470D0A1A0A),

@@ -92,7 +92,7 @@ public class ProgramService {
 
         // Create new program
         Program program = new Program();
-        program.setName(programDTO.getName());
+        program.setTitle(programDTO.getName());
         program.setCreator(currentUser);
         program.setFollowersNumber(0);
 
@@ -124,113 +124,137 @@ public class ProgramService {
     public ProgramDetailsDTO getProgramDetails(Long id) {
         Program program = programRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Program not found"));
+        return mapProgramToDetailsDTO(program);
+    }
 
+    private ProgramDetailsDTO mapProgramToDetailsDTO(Program program) {
         ProgramDetailsDTO programDetailsDTO = new ProgramDetailsDTO();
         programDetailsDTO.setId(program.getId());
-        programDetailsDTO.setName(program.getName());
+        programDetailsDTO.setName(program.getTitle());
         programDetailsDTO.setFollowersNumber(program.getFollowersNumber());
-
-        // Map creator
-        UserProgramDetailsDTO creatorDTO = new UserProgramDetailsDTO();
-        User creator = program.getCreator();
-        creatorDTO.setId(creator.getId());
-        creatorDTO.setUsername(creator.getUsername());
-        // Add other user fields as needed
-        programDetailsDTO.setCreator(creatorDTO);
-
-        // Map ratings if available
-
         programDetailsDTO.setRating(program.getRating());
 
+        // Map creator
+        programDetailsDTO.setCreator(mapUserToProgramDetailsDTO(program.getCreator()));
 
         // Map weeks with their workouts
-        List<WeekDetailsDTO> weekDetailsDTOs = program.getWeeks().stream()
-                .map(week -> {
-                    WeekDetailsDTO weekDetailsDTO = new WeekDetailsDTO();
-                    weekDetailsDTO.setId(week.getId());
-
-                    // Map workouts for each week
-                    List<WorkoutDetailsDTO> workoutDetailsDTOs = week.getWorkouts().stream()
-                            .map(workout -> {
-                                WorkoutDetailsDTO workoutDetailsDTO = new WorkoutDetailsDTO();
-                                workoutDetailsDTO.setId(workout.getId());
-                                workoutDetailsDTO.setTitle(workout.getTitle());
-                                workoutDetailsDTO.setDescription(workout.getDescription());
-                                workoutDetailsDTO.setNumber(workout.getNumber());
-
-                                // Map workout exercises for each workout
-                                List<WorkoutExerciseDetailsDTO> exerciseDetailsDTOs = workout.getWorkoutExercises().stream()
-                                        .map(exercise -> {
-                                            WorkoutExerciseDetailsDTO exerciseDetailsDTO = new WorkoutExerciseDetailsDTO();
-                                            exerciseDetailsDTO.setId(exercise.getId());
-                                            ExerciseDetailsDTO exerciseDetailsDTO1 = new ExerciseDetailsDTO();
-                                            exerciseDetailsDTO1.setId(exercise.getExercise().getId());
-                                            exerciseDetailsDTO1.setTitle(exercise.getExercise().getTitle());
-                                            exerciseDetailsDTO1.setDescription(exercise.getExercise().getDescription());
-                                            exerciseDetailsDTO.setExercise(exerciseDetailsDTO1);
-                                            exerciseDetailsDTO.setMinimumRestTime(exercise.getMinimumRestTime());
-                                            exerciseDetailsDTO.setMaximumRestTime(exercise.getMaximumRestTime());
-
-                                            // Map exercise sets for each exercise
-                                            List<WorkoutExerciseSetDetailsDTO> setDetailsDTOs = exercise.getSets().stream()
-                                                    .map(set -> {
-                                                        WorkoutExerciseSetDetailsDTO setDetailsDTO = new WorkoutExerciseSetDetailsDTO();
-                                                        setDetailsDTO.setId(set.getId());
-
-                                                        // Map volume
-                                                        SetVolumeDetailsDTO volumeDTO = new SetVolumeDetailsDTO(
-                                                                set.getVolume().getMinimumVolume(),
-                                                                set.getVolume().getMaximumVolume()
-                                                        );
-                                                        setDetailsDTO.setVolume(volumeDTO);
-
-                                                        // Map intensity
-                                                        SetIntensityDetailsDTO intensityDTO = new SetIntensityDetailsDTO(
-                                                                set.getIntensity().getMinimumIntensity(),
-                                                                set.getIntensity().getMaximumIntensity()
-                                                        );
-                                                        setDetailsDTO.setIntensity(intensityDTO);
-
-                                                        // Map volume metric
-                                                        VolumeMetricDetailsDTO volumeMetricDTO = new VolumeMetricDetailsDTO();
-                                                        volumeMetricDTO.setId(set.getVolumeMetric().getId());
-                                                        volumeMetricDTO.setRange(set.getVolumeMetric().isRange());
-                                                        volumeMetricDTO.setTitle(set.getVolumeMetric().getTitle());
-                                                        volumeMetricDTO.setMetricSymbol(set.getVolumeMetric().getMetricSymbol());
-                                                        setDetailsDTO.setVolumeMetric(volumeMetricDTO);
-
-                                                        // Map intensity metric
-                                                        IntensityMetricDetailsDTO intensityMetricDTO = new IntensityMetricDetailsDTO();
-                                                        intensityMetricDTO.setId(set.getIntensityMetric().getId());
-                                                        intensityMetricDTO.setMinimumIntensity(set.getIntensityMetric().getMinimumIntensity());
-                                                        intensityMetricDTO.setMaximumIntensity(set.getIntensityMetric().getMaximumIntensity());
-                                                        intensityMetricDTO.setRange(set.getIntensityMetric().isRange());
-                                                        intensityMetricDTO.setTitle(set.getIntensityMetric().getTitle());
-                                                        intensityMetricDTO.setMetricSymbol(set.getIntensityMetric().getMetricSymbol());
-                                                        setDetailsDTO.setIntensityMetric(intensityMetricDTO);
-
-                                                        return setDetailsDTO;
-                                                    })
-                                                    .toList();
-
-                                            exerciseDetailsDTO.setWorkoutExerciseSets(setDetailsDTOs);
-                                            return exerciseDetailsDTO;
-                                        })
-                                        .toList();
-
-                                workoutDetailsDTO.setWorkoutExercises(exerciseDetailsDTOs);
-                                return workoutDetailsDTO;
-                            })
-                            .toList();
-
-                    weekDetailsDTO.setWorkouts(workoutDetailsDTOs);
-                    return weekDetailsDTO;
-                })
-                .toList();
-
-        programDetailsDTO.setWeeks(weekDetailsDTOs);
+        programDetailsDTO.setWeeks(mapWeeksToDetailsDTOs(program.getWeeks()));
 
         return programDetailsDTO;
+    }
+
+    private UserProgramDetailsDTO mapUserToProgramDetailsDTO(User user) {
+        UserProgramDetailsDTO creatorDTO = new UserProgramDetailsDTO();
+        creatorDTO.setId(user.getId());
+        creatorDTO.setUsername(user.getUsername());
+        // Add other user fields as needed
+        return creatorDTO;
+    }
+
+    public List<WeekDetailsDTO> mapWeeksToDetailsDTOs(List<Week> weeks) {
+        return weeks.stream()
+                .map(this::mapWeekToDetailsDTO)
+                .toList();
+    }
+
+    public WeekDetailsDTO mapWeekToDetailsDTO(Week week) {
+        WeekDetailsDTO weekDetailsDTO = new WeekDetailsDTO();
+        weekDetailsDTO.setId(week.getId());
+        weekDetailsDTO.setWorkouts(mapWorkoutsToDetailsDTOs(week.getWorkouts()));
+        return weekDetailsDTO;
+    }
+
+    public List<WorkoutDetailsDTO> mapWorkoutsToDetailsDTOs(List<Workout> workouts) {
+        return workouts.stream()
+                .map(this::mapWorkoutToDetailsDTO)
+                .toList();
+    }
+
+    public WorkoutDetailsDTO mapWorkoutToDetailsDTO(Workout workout) {
+        WorkoutDetailsDTO workoutDetailsDTO = new WorkoutDetailsDTO();
+        workoutDetailsDTO.setId(workout.getId());
+        workoutDetailsDTO.setTitle(workout.getTitle());
+        workoutDetailsDTO.setDescription(workout.getDescription());
+        workoutDetailsDTO.setNumber(workout.getNumber());
+        workoutDetailsDTO.setWorkoutExercises(mapWorkoutExercisesToDetailsDTOs(workout.getWorkoutExercises()));
+        return workoutDetailsDTO;
+    }
+
+    public List<WorkoutExerciseDetailsDTO> mapWorkoutExercisesToDetailsDTOs(List<WorkoutExercise> exercises) {
+        return exercises.stream()
+                .map(this::mapWorkoutExerciseToDetailsDTO)
+                .toList();
+    }
+
+    public WorkoutExerciseDetailsDTO mapWorkoutExerciseToDetailsDTO(WorkoutExercise exercise) {
+        WorkoutExerciseDetailsDTO exerciseDetailsDTO = new WorkoutExerciseDetailsDTO();
+        exerciseDetailsDTO.setId(exercise.getId());
+        exerciseDetailsDTO.setExercise(mapExerciseToDetailsDTO(exercise.getExercise()));
+        exerciseDetailsDTO.setMinimumRestTime(exercise.getMinimumRestTime());
+        exerciseDetailsDTO.setMaximumRestTime(exercise.getMaximumRestTime());
+        exerciseDetailsDTO.setSets(mapSetsToDetailsDTOs(exercise.getSets()));
+        return exerciseDetailsDTO;
+    }
+
+    public ExerciseDetailsDTO mapExerciseToDetailsDTO(Exercise exercise) {
+        ExerciseDetailsDTO exerciseDetailsDTO = new ExerciseDetailsDTO();
+        exerciseDetailsDTO.setId(exercise.getId());
+        exerciseDetailsDTO.setTitle(exercise.getTitle());
+        exerciseDetailsDTO.setDescription(exercise.getDescription());
+        return exerciseDetailsDTO;
+    }
+
+    public List<SetDetailsDTO> mapSetsToDetailsDTOs(List<Set> sets) {
+        return sets.stream()
+                .map(this::mapSetToDetailsDTO)
+                .toList();
+    }
+
+    public SetDetailsDTO mapSetToDetailsDTO(Set set) {
+        SetDetailsDTO setDetailsDTO = new SetDetailsDTO();
+        setDetailsDTO.setId(set.getId());
+
+        // Map volume
+        SetVolumeDetailsDTO volumeDTO = new SetVolumeDetailsDTO(
+                set.getVolume().getMinimumVolume(),
+                set.getVolume().getMaximumVolume()
+        );
+        setDetailsDTO.setVolume(volumeDTO);
+
+        // Map intensity
+        SetIntensityDetailsDTO intensityDTO = new SetIntensityDetailsDTO(
+                set.getIntensity().getMinimumIntensity(),
+                set.getIntensity().getMaximumIntensity()
+        );
+        setDetailsDTO.setIntensity(intensityDTO);
+
+        // Map volume metric
+        setDetailsDTO.setVolumeMetric(mapVolumeMetricToDetailsDTO(set.getVolumeMetric()));
+
+        // Map intensity metric
+        setDetailsDTO.setIntensityMetric(mapIntensityMetricToDetailsDTO(set.getIntensityMetric()));
+
+        return setDetailsDTO;
+    }
+
+    public VolumeMetricDetailsDTO mapVolumeMetricToDetailsDTO(VolumeMetric volumeMetric) {
+        VolumeMetricDetailsDTO volumeMetricDTO = new VolumeMetricDetailsDTO();
+        volumeMetricDTO.setId(volumeMetric.getId());
+        volumeMetricDTO.setRange(volumeMetric.isRange());
+        volumeMetricDTO.setTitle(volumeMetric.getTitle());
+        volumeMetricDTO.setMetricSymbol(volumeMetric.getMetricSymbol());
+        return volumeMetricDTO;
+    }
+
+    public IntensityMetricDetailsDTO mapIntensityMetricToDetailsDTO(IntensityMetric intensityMetric) {
+        IntensityMetricDetailsDTO intensityMetricDTO = new IntensityMetricDetailsDTO();
+        intensityMetricDTO.setId(intensityMetric.getId());
+        intensityMetricDTO.setMinimumIntensity(intensityMetric.getMinimumIntensity());
+        intensityMetricDTO.setMaximumIntensity(intensityMetric.getMaximumIntensity());
+        intensityMetricDTO.setRange(intensityMetric.isRange());
+        intensityMetricDTO.setTitle(intensityMetric.getTitle());
+        intensityMetricDTO.setMetricSymbol(intensityMetric.getMetricSymbol());
+        return intensityMetricDTO;
     }
 
     private Week createWeek(WeekDTO weekDTO) {
@@ -398,7 +422,7 @@ public class ProgramService {
         startedProgramRepository.save(startedProgram);
         user.getStartedPrograms().add(startedProgram);
         userRepository.save(user);
-        return new StartProgramResponseDTO(startedProgram.getId(),program.getName());
+        return new StartProgramResponseDTO(startedProgram.getId(),program.getTitle());
 
     }
 }

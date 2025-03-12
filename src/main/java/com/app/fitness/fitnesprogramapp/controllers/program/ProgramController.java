@@ -6,8 +6,10 @@ import com.app.fitness.fitnesprogramapp.dtos.program.currentworkout.CurrentWorko
 import com.app.fitness.fitnesprogramapp.dtos.program.details.ProgramDetailsDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHistoryDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHistoryResponseDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.programhistory.ProgramHistoryDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.startprogram.StartProgramResponseDTO;
 import com.app.fitness.fitnesprogramapp.models.program.Program;
+import com.app.fitness.fitnesprogramapp.services.program.ProgramHistoryService;
 import com.app.fitness.fitnesprogramapp.services.program.ProgramService;
 import com.app.fitness.fitnesprogramapp.services.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ import java.util.Optional;
 public class ProgramController {
     private final ProgramService programService;
     private final UserService userService;
+    private final ProgramHistoryService programHistoryService;
     @GetMapping
     public ResponseEntity<Page<ProgramOverviewDTO>> getAllPrograms(
             @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage
@@ -78,18 +81,11 @@ public class ProgramController {
 
     }
 
+    @GetMapping("/history/{startedProgramId}")
+    public ResponseEntity<ProgramHistoryDTO> getProgramHistory(@PathVariable Long startedProgramId,Authentication authentication){
+        return ResponseEntity.ok(programHistoryService.getProgramHistory(startedProgramId,"john_doe"));
+    }
 
-
-//    @PostMapping("/history/exercise")
-//    public ResponseEntity<CreateExerciseHistoryResponseDTO> createExerciseHistory(@RequestBody CreateExerciseHistoryDTO createExerciseHistoryDTO, Authentication authentication) {
-//        //String username = authentication.getName();
-//        return ResponseEntity.ok(programService.createExerciseHistory("john_doe",createExerciseHistoryDTO));
-//    }
-//
-//    @GetMapping("/current-workout/{workoutId}")
-//    public ResponseEntity<CurrentWorkoutDTO> getCurrentWorkout(@PathVariable Long workoutId){
-//        return ResponseEntity.ok(programService.getCurrentWorkout(workoutId));
-//    }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProgramDetailsDTO> getProgramById(@PathVariable Long id) {
@@ -98,7 +94,7 @@ public class ProgramController {
         return ResponseEntity.ok(program);
     }
 
-    @GetMapping("/{id}/image")
+    @GetMapping("/image/{id}")
     public ResponseEntity<byte[]> getProgramImage(@PathVariable Long id) {
         return ResponseEntity.ok(programService.getProgramImage(id));
     }

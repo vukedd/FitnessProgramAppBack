@@ -20,7 +20,7 @@ public class ProgramOverviewDTO {
     public static ProgramOverviewDTO fromEntity(Program program) {
         return new ProgramOverviewDTO(
                 program.getId(),
-                program.getName(),
+                program.getTitle(),
                 program.getImageData(),
                 program.getCreator().getUsername(),
                 program.getFollowersNumber(),
@@ -31,7 +31,7 @@ public class ProgramOverviewDTO {
     public static ProgramOverviewDTO fromEntity(Program program,Long startedProgramId) {
         return new ProgramOverviewDTO(
                 program.getId(),
-                program.getName(),
+                program.getTitle(),
                 program.getImageData(),
                 program.getCreator().getUsername(),
                 program.getFollowersNumber(),
