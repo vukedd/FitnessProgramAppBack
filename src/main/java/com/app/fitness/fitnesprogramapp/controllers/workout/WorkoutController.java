@@ -1,8 +1,10 @@
 package com.app.fitness.fitnesprogramapp.controllers.workout;
 
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateDoneSetDTO;
+import com.app.fitness.fitnesprogramapp.dtos.set.CompleteSetResponseDTO;
+import com.app.fitness.fitnesprogramapp.dtos.workout.CompleteWorkoutResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.workout.NextWorkoutDTO;
-import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
+import com.app.fitness.fitnesprogramapp.models.set.DoneSet;
 import com.app.fitness.fitnesprogramapp.services.workout.WorkoutService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,22 +35,26 @@ public class WorkoutController {
 
     /**
      * Completes a set in a workout
-     * @param workoutId The started workout ID
      * @param doneSetDTO The completed set data
      * @return The updated started workout
      */
-    @PostMapping("/completeSet/{workoutId}")
-    public ResponseEntity<?> completeSet(@PathVariable Long workoutId, @RequestBody CreateDoneSetDTO doneSetDTO) {
-        try {
-            StartedWorkout updatedWorkout = workoutService.processCompleteSet(workoutId, doneSetDTO);
+    @PostMapping("/completeSet")
+    public ResponseEntity<DoneSet> completeSet(@RequestBody CreateDoneSetDTO doneSetDTO) {
+        return ResponseEntity.ok((workoutService.completeSet(doneSetDTO)));
+    }
 
-            if (updatedWorkout == null) {
-                return ResponseEntity.notFound().build();
-            }
+    @PostMapping("/completeWorkout/{workoutId}/{startedProgramId}")
+    public ResponseEntity<CompleteWorkoutResponseDTO> completeWorkout(@PathVariable Long workoutId, @PathVariable Long startedProgramId) {
+        return ResponseEntity.ok((workoutService.completeWorkout(workoutId,startedProgramId)));
+    }
 
-            return ResponseEntity.ok(updatedWorkout);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    /**
+     * Removes a completed set from a workout
+     * @param doneSetId The ID of the completed set to remove
+     * @return Response with success message
+     */
+    @DeleteMapping("/uncompleteSet/{startedWorkoutId}/{doneSetId}")
+    public ResponseEntity<CompleteSetResponseDTO> uncompleteSet(@PathVariable Long startedWorkoutId,@PathVariable Long doneSetId) {
+        return ResponseEntity.ok(workoutService.uncompleteSet(doneSetId,startedWorkoutId));
     }
 }
