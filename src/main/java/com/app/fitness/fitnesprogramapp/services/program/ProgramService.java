@@ -192,7 +192,7 @@ public class ProgramService {
         exerciseDetailsDTO.setExercise(mapExerciseToDetailsDTO(exercise.getExercise()));
         exerciseDetailsDTO.setMinimumRestTime(exercise.getMinimumRestTime());
         exerciseDetailsDTO.setMaximumRestTime(exercise.getMaximumRestTime());
-        exerciseDetailsDTO.setSets(mapSetsToDetailsDTOs(exercise.getSets()));
+        exerciseDetailsDTO.setWorkoutExerciseSets(mapSetsToDetailsDTOs(exercise.getSets()));
         return exerciseDetailsDTO;
     }
 
