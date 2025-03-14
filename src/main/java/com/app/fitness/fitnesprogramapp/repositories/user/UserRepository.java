@@ -15,4 +15,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.username = ?1 AND u.enabled = true")
     Optional<User> findVerifiedUserByUsername(String username);
+
+    @Query("SELECT u FROM User u LEFT JOIN RefreshToken rt ON u.id = rt.user.id WHERE rt.id = ?1")
+    Optional<User> findUserByRefreshTokenId(Long refreshTokenId);
 }

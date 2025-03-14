@@ -17,4 +17,9 @@ public class UserController {
     public ResponseEntity<UserProfileDto> getUserByUsername(@RequestParam String username) {
         return ResponseEntity.ok(userService.getUserByUsername(username));
     }
+
+    @GetMapping("/me1")
+    public ResponseEntity<UserProfileDto> getUserByRefreshTokenId(@RequestParam Long refreshTokenId) {
+        return ResponseEntity.ok(userService.getUserByRefreshTokenId(refreshTokenId));
+    }
 }
