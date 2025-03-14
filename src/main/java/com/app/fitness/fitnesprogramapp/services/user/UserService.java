@@ -17,8 +17,17 @@ public class UserService {
     public UserProfileDto getUserByUsername(final String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(GONE,
-                        "The user account has been deleted or inactivated"));
+                        "The user account has been deleted or deactivated"));
 
         return new UserProfileDto(user.getUsername(), user.getEmail());
     }
+
+    public UserProfileDto getUserByRefreshTokenId(final Long refreshTokenId) {
+        User user = userRepository.findUserByRefreshTokenId(refreshTokenId)
+                .orElseThrow(() -> new ResponseStatusException(GONE,
+                        "The user account has been deleted or deactivated"));
+
+        return new UserProfileDto(user.getUsername(), user.getEmail());
+    }
+
 }

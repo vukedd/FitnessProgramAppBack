@@ -58,8 +58,7 @@ public class AuthService {
                 .findByIdAndExpiresAtAfter(refreshTokenId, Instant.now())
                 .orElseThrow(() -> new ValidationException("Invalid or expired refresh token!", ValidationException.ErrorType.BAD_REQUEST));
 
-        final var newAccessToken = jwtService
-                .generateToken(refreshTokenEntity.getUser().getUsername());
+        final var newAccessToken = jwtService.generateToken(refreshTokenEntity.getUser().getUsername());
         return new AuthenticationResponseDto(newAccessToken, refreshTokenId);
     }
 
