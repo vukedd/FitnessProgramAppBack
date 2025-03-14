@@ -51,11 +51,11 @@ public class ProgramController {
             Authentication authentication) {
 
             // Get current authenticated user
-            //String username = authentication.getName();
+            String username = authentication.getName();
             ProgramCreateDTO programDTO = programService.convertJsonToDTO(programJson);
 
             // Create program with the provided data
-            Program createdProgram = programService.createProgram(programDTO, image, "john_doe");
+            Program createdProgram = programService.createProgram(programDTO, image, username);
 
             // Return the created program ID
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -69,21 +69,22 @@ public class ProgramController {
         Authentication authentication
     )
     {
-//        String username = authentication.getName();
-        return ResponseEntity.ok(programService.startProgram(programId,"john_doe"));
+        String username = authentication.getName();
+        return ResponseEntity.ok(programService.startProgram(programId,username));
     }
 
     @GetMapping("/started")
     public ResponseEntity<Page<ProgramOverviewDTO>> getStartedPrograms(Authentication authentication,
                                                                        @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage) {
-//        String username = authentication.getName();
-        return ResponseEntity.ok(programService.getStartedProgramsOverview(programsPage,"john_doe"));
+        String username = authentication.getName();
+        return ResponseEntity.ok(programService.getStartedProgramsOverview(programsPage,username));
 
     }
 
     @GetMapping("/history/{startedProgramId}")
     public ResponseEntity<ProgramHistoryDTO> getProgramHistory(@PathVariable Long startedProgramId,Authentication authentication){
-        return ResponseEntity.ok(programHistoryService.getProgramHistory(startedProgramId,"john_doe"));
+        String username = authentication.getName();
+        return ResponseEntity.ok(programHistoryService.getProgramHistory(startedProgramId,username));
     }
 
 

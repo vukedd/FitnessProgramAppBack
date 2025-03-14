@@ -103,14 +103,7 @@ public class ProgramHistoryService {
 
             // Map done sets
             for (DoneSet doneSet : doneSetsForExercise) {
-                DoneSetsHistoryDTO doneSetDTO = new DoneSetsHistoryDTO();
-                doneSetDTO.setId(doneSet.getId());
-                doneSetDTO.setSetDetails(programService.mapSetToDetailsDTO(doneSet.getSet()));
-                doneSetDTO.setVolume(doneSet.getVolume());
-                doneSetDTO.setIntensity(doneSet.getIntensity());
-                doneSetDTO.setDate(doneSet.getDate());
-                doneSetDTO.setWeightLifted(doneSet.getWeightLifted());
-                exerciseDTO.getDoneSets().add(doneSetDTO);
+                exerciseDTO.getDoneSets().add(mapDoneSetToHistoryDTO(doneSet));
             }
 
             // Get all sets for this exercise
@@ -132,5 +125,16 @@ public class ProgramHistoryService {
         }
 
         return dto;
+    }
+
+    public DoneSetsHistoryDTO mapDoneSetToHistoryDTO(DoneSet doneSet){
+        DoneSetsHistoryDTO doneSetDTO = new DoneSetsHistoryDTO();
+        doneSetDTO.setId(doneSet.getId());
+        doneSetDTO.setSetDetails(programService.mapSetToDetailsDTO(doneSet.getSet()));
+        doneSetDTO.setVolume(doneSet.getVolume());
+        doneSetDTO.setIntensity(doneSet.getIntensity());
+        doneSetDTO.setDate(doneSet.getDate());
+        doneSetDTO.setWeightLifted(doneSet.getWeightLifted());
+        return doneSetDTO;
     }
 }
