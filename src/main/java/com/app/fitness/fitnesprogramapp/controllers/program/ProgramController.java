@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -36,11 +37,20 @@ public class ProgramController {
     private final ProgramService programService;
     private final UserService userService;
     private final ProgramHistoryService programHistoryService;
+
     @GetMapping
     public ResponseEntity<Page<ProgramOverviewDTO>> getAllPrograms(
             @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage
     ) {
         Page<ProgramOverviewDTO> programs = programService.getAllProgramsOverview(programsPage);
+        return ResponseEntity.ok(programs);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<ProgramOverviewDTO>> searchPrograms(
+            @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage,
+            @RequestParam("title") String title) {
+        Page<ProgramOverviewDTO> programs = programService.searchProgramsByTitle(title, programsPage);
         return ResponseEntity.ok(programs);
     }
 

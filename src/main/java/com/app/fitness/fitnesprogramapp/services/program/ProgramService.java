@@ -58,9 +58,14 @@ public class ProgramService {
     private final DoneSetRepository doneSetRepository;
     private final StartedProgramRepository startedProgramRepository;
 
-
     public Page<ProgramOverviewDTO> getAllProgramsOverview(Pageable pageable) {
         Page<Program> programPage = programRepository.findAll(pageable);
+        return programPage.map(ProgramOverviewDTO::fromEntity);
+    }
+
+    public Page<ProgramOverviewDTO> searchProgramsByTitle(String title, Pageable pageable) {
+        String searchTerm = "%" + title + "%";
+        Page<Program> programPage = programRepository.searchByTitle(searchTerm, pageable);
         return programPage.map(ProgramOverviewDTO::fromEntity);
     }
 
