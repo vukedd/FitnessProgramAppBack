@@ -87,7 +87,8 @@ public class ProgramController {
     public ResponseEntity<Page<ProgramOverviewDTO>> getStartedPrograms(Authentication authentication,
                                                                        @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage) {
         String username = authentication.getName();
-        return ResponseEntity.ok(programService.getStartedProgramsOverview(programsPage,username));
+        System.out.println(username);
+        return ResponseEntity.ok(programService.getStartedProgramsOverview(programsPage, username));
 
     }
 

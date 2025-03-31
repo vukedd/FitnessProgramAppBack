@@ -78,6 +78,8 @@ public class ProgramService {
                 })
                 .toList();
 
+        System.out.println("ok");
+
         return new PageImpl<>(programDTOs, pageable, programDTOs.size());
     }
 
