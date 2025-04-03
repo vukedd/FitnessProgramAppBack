@@ -14,7 +14,7 @@ public class WorkoutExerciseDetailsDTO {
 
     private ExerciseDetailsDTO exercise;
 
-    private List<SetDetailsDTO> workoutExerciseSets;
+    private List<SetDetailsDTO> sets;
 
     private int minimumRestTime;
     private int maximumRestTime;
