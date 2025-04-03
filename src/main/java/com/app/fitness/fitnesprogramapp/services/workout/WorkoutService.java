@@ -2,12 +2,14 @@ package com.app.fitness.fitnesprogramapp.services.workout;
 
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateDoneSetDTO;
 import com.app.fitness.fitnesprogramapp.dtos.set.CompleteSetResponseDTO;
-import com.app.fitness.fitnesprogramapp.dtos.workout.CompleteWorkoutResponseDTO;
-import com.app.fitness.fitnesprogramapp.dtos.workout.NextWorkoutDTO;
+import com.app.fitness.fitnesprogramapp.dtos.workout.*;
+import com.app.fitness.fitnesprogramapp.models.exercise.Exercise;
+import com.app.fitness.fitnesprogramapp.models.exercise.ExerciseMuscle;
+import com.app.fitness.fitnesprogramapp.models.exercise.Muscle;
 import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
 import com.app.fitness.fitnesprogramapp.models.program.Program;
 import com.app.fitness.fitnesprogramapp.models.program.StartedProgram;
-import com.app.fitness.fitnesprogramapp.models.set.DoneSet;
+import com.app.fitness.fitnesprogramapp.models.set.*;
 import com.app.fitness.fitnesprogramapp.models.set.Set;
 import com.app.fitness.fitnesprogramapp.models.week.StartedWeek;
 import com.app.fitness.fitnesprogramapp.models.week.Week;
@@ -19,10 +21,12 @@ import com.app.fitness.fitnesprogramapp.repositories.set.DoneSetRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.SetRepository;
 import com.app.fitness.fitnesprogramapp.repositories.week.StartedWeekRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.StartedWorkoutRepository;
+import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ public class WorkoutService {
     private final DoneSetRepository doneSetRepository;
     private final WorkoutExerciseRepository workoutExerciseRepository;
     private final SetRepository setRepository;
+    private final WorkoutRepository workoutRepository;
 
     /**
      * Processes the next workout request for a given program ID
@@ -50,8 +55,9 @@ public class WorkoutService {
         NextWorkoutDTO nextWorkoutDTO = getNextWorkout(startedProgram);
 
         // If we need to start a new workout, create it and save
-        if (nextWorkoutDTO.getStartedWorkout() != null && "start".equals(nextWorkoutDTO.getAction())) {
-            Workout workoutToStart = nextWorkoutDTO.getStartedWorkout().getWorkout();
+        if (nextWorkoutDTO.getNextWorkoutDetails() != null && "start".equals(nextWorkoutDTO.getAction())) {
+            Workout workoutToStart = nextWorkoutDTO.getNextWorkoutDetails().getWorkout().getId() != null ?
+                    workoutRepository.findById(nextWorkoutDTO.getNextWorkoutDetails().getWorkout().getId()).orElseThrow():null;
 
             // Create and persist a real started workout instance
             StartedWorkout newStartedWorkout = new StartedWorkout();
@@ -73,7 +79,7 @@ public class WorkoutService {
             startedProgramRepository.save(startedProgram);
 
             // Update the DTO with the persisted started workout
-            nextWorkoutDTO.setStartedWorkout(savedWorkout);
+            nextWorkoutDTO.setNextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(savedWorkout));
         }
 
         return nextWorkoutDTO;
@@ -84,7 +90,7 @@ public class WorkoutService {
      * @param doneSetDTO The completed set data
      * @return Updated StartedWorkout or null if not found
      */
-    public DoneSet completeSet(CreateDoneSetDTO doneSetDTO) {
+    public NextWorkoutDoneSetDTO completeSet(CreateDoneSetDTO doneSetDTO) {
         StartedWorkout startedWorkout = startedWorkoutRepository.findById(doneSetDTO.getStartedWorkoutId()).orElseThrow();
 
         DoneSet doneSet = new DoneSet();
@@ -103,7 +109,7 @@ public class WorkoutService {
         startedWorkoutRepository.save(startedWorkout);
 
         // Update workout status based on set completion
-        return doneSet;
+        return mapDoneSetToNextWorkoutDoneSetDTO(doneSet);
     }
 
     /**
@@ -163,7 +169,7 @@ public class WorkoutService {
             tempStartedWorkout.setWorkout(nextWorkout);
 
             return NextWorkoutDTO.builder()
-                    .startedWorkout(tempStartedWorkout)
+                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(tempStartedWorkout))
                     .action("start")
                     .build();
         }
@@ -175,7 +181,7 @@ public class WorkoutService {
         if (!latestWorkout.isFinished()) {
             // Latest workout is not finished, continue it
             return NextWorkoutDTO.builder()
-                    .startedWorkout(latestWorkout)
+                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(latestWorkout))
                     .action("continue")
                     .build();
         }
@@ -202,7 +208,7 @@ public class WorkoutService {
             tempStartedWorkout.setWorkout(nextWorkout);
 
             return NextWorkoutDTO.builder()
-                    .startedWorkout(tempStartedWorkout)
+                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(tempStartedWorkout))
                     .action("start")
                     .build();
         }
@@ -258,7 +264,7 @@ public class WorkoutService {
         tempStartedWorkout.setWorkout(firstWorkout);
 
         return NextWorkoutDTO.builder()
-                .startedWorkout(tempStartedWorkout)
+                .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(tempStartedWorkout))
                 .action("start")
                 .build();
     }
@@ -314,7 +320,7 @@ public class WorkoutService {
             tempStartedWorkout.setWorkout(firstWorkout);
 
             return NextWorkoutDTO.builder()
-                    .startedWorkout(tempStartedWorkout)
+                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(tempStartedWorkout))
                     .action("start")
                     .build();
         } else {
@@ -328,10 +334,9 @@ public class WorkoutService {
         }
     }
 
-
     public CompleteWorkoutResponseDTO completeWorkout(Long startedWorkoutId, Long startedProgramId) {
-       StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
-       StartedProgram startedProgram = startedProgramRepository.findById(startedProgramId).orElseThrow();
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+        StartedProgram startedProgram = startedProgramRepository.findById(startedProgramId).orElseThrow();
         // Find the started week for this workout
         StartedWeek startedWeek =
                 startedProgram.getStartedWeeks().stream()
@@ -352,10 +357,8 @@ public class WorkoutService {
             checkProgramCompletion(startedProgram);
         }
 
-
         return new CompleteWorkoutResponseDTO(startedWorkoutId,"Successfully completed workout!");
     }
-
 
     /**
      * Checks if all workouts in a week have been completed
@@ -428,4 +431,180 @@ public class WorkoutService {
         return new CompleteSetResponseDTO(doneSetId, "Successfully removed completed set from workout!");
     }
 
+    private NextWorkoutDetailsDTO mapStartedWorkoutToNextWorkoutDetailsDTO(StartedWorkout entity) {
+        if (entity == null) return null;
+        return NextWorkoutDetailsDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .workout(mapWorkoutToNextWorkoutDefinitionDTO(entity.getWorkout())) // Call renamed mapper
+                .doneSets(mapDoneSetListToNextWorkoutDoneSetDTOList(entity.getDoneSets())) // Call renamed list mapper
+                .startDate(entity.getStartDate())
+                .doneDate(entity.getDoneDate())
+                .finished(entity.isFinished())
+                .build();
+    }
+
+    // Renamed: mapWorkoutToDTO -> mapWorkoutToNextWorkoutDefinitionDTO
+    // Returns: NextWorkoutDefinitionDTO
+    private NextWorkoutDefinitionDTO mapWorkoutToNextWorkoutDefinitionDTO(Workout entity) {
+        if (entity == null) return null;
+        return NextWorkoutDefinitionDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .title(entity.getTitle())
+                .description(entity.getDescription())
+                .number(entity.getNumber())
+                .workoutExercises(mapWorkoutExerciseListToNextWorkoutExerciseDefinitionDTOList(entity.getWorkoutExercises())) // Call renamed list mapper
+                .build();
+    }
+
+    // Renamed list mapper
+    private List<NextWorkoutDoneSetDTO> mapDoneSetListToNextWorkoutDoneSetDTOList(List<DoneSet> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream()
+                .map(this::mapDoneSetToNextWorkoutDoneSetDTO) // Call renamed item mapper
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    // Renamed list mapper
+    private List<NextWorkoutExerciseDefinitionDTO> mapWorkoutExerciseListToNextWorkoutExerciseDefinitionDTOList(List<WorkoutExercise> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream()
+                .map(this::mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO) // Call renamed item mapper
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    // Renamed: mapDoneSetToDTO -> mapDoneSetToNextWorkoutDoneSetDTO
+    // Returns: NextWorkoutDoneSetDTO
+    private NextWorkoutDoneSetDTO mapDoneSetToNextWorkoutDoneSetDTO(DoneSet entity) {
+        if (entity == null) return null;
+        return NextWorkoutDoneSetDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .set(mapSetToNextWorkoutSetDefinitionDTO(entity.getSet())) // Call renamed mapper
+                .workoutExercise(mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO(entity.getWorkoutExercise())) // Call renamed mapper
+                .volume(entity.getVolume())
+                .intensity(entity.getIntensity())
+                .date(entity.getDate())
+                .weightLifted(entity.getWeightLifted())
+                .build();
+    }
+
+    // Renamed: mapWorkoutExerciseToDTO -> mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO
+    // Returns: NextWorkoutExerciseDefinitionDTO
+    private NextWorkoutExerciseDefinitionDTO mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO(WorkoutExercise entity) {
+        if (entity == null) return null;
+        return NextWorkoutExerciseDefinitionDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .exercise(mapExerciseToNextWorkoutExerciseBaseDTO(entity.getExercise())) // Call renamed mapper
+                .sets(mapSetListToNextWorkoutSetDefinitionDTOList(entity.getSets())) // Call renamed list mapper
+                .minimumRestTime(entity.getMinimumRestTime())
+                .maximumRestTime(entity.getMaximumRestTime())
+                .build();
+    }
+
+    // Renamed: mapExerciseToDTO -> mapExerciseToNextWorkoutExerciseBaseDTO
+    // Returns: NextWorkoutExerciseBaseDTO
+    private NextWorkoutExerciseBaseDTO mapExerciseToNextWorkoutExerciseBaseDTO(Exercise entity) {
+        if (entity == null) return null;
+        return NextWorkoutExerciseBaseDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .title(entity.getTitle())
+                .description(entity.getDescription())
+                .exerciseMuscles(mapExerciseMuscleListToNextWorkoutExerciseMuscleLinkDTOList(entity.getExerciseMuscles())) // Call renamed list mapper
+                .build();
+    }
+
+    // Renamed list mapper
+    private List<NextWorkoutSetDefinitionDTO> mapSetListToNextWorkoutSetDefinitionDTOList(List<Set> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream()
+                .map(this::mapSetToNextWorkoutSetDefinitionDTO) // Call renamed item mapper
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    // Renamed list mapper
+    private List<NextWorkoutExerciseMuscleLinkDTO> mapExerciseMuscleListToNextWorkoutExerciseMuscleLinkDTOList(List<ExerciseMuscle> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream()
+                .map(this::mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO) // Call renamed item mapper
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    // Renamed: mapExerciseMuscleToDTO -> mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO
+    // Returns: NextWorkoutExerciseMuscleLinkDTO
+    private NextWorkoutExerciseMuscleLinkDTO mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO(ExerciseMuscle entity) {
+        if (entity == null) return null;
+        return NextWorkoutExerciseMuscleLinkDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .muscle(mapMuscleToNextWorkoutMuscleInfoDTO(entity.getMuscle())) // Call renamed mapper
+                .intensity(entity.getIntensity())
+                .build();
+    }
+
+    // Renamed: mapMuscleToDTO -> mapMuscleToNextWorkoutMuscleInfoDTO
+    // Returns: NextWorkoutMuscleInfoDTO
+    private NextWorkoutMuscleInfoDTO mapMuscleToNextWorkoutMuscleInfoDTO(Muscle entity) {
+        if (entity == null) return null;
+        return NextWorkoutMuscleInfoDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .name(entity.getName())
+                .build();
+    }
+
+    // Renamed: mapSetToDTO -> mapSetToNextWorkoutSetDefinitionDTO
+    // Returns: NextWorkoutSetDefinitionDTO
+    private NextWorkoutSetDefinitionDTO mapSetToNextWorkoutSetDefinitionDTO(Set entity) {
+        if (entity == null) return null;
+        return NextWorkoutSetDefinitionDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .volume(mapSetVolumeToNextWorkoutSetVolumeDetailsDTO(entity.getVolume())) // Call renamed mapper
+                .intensity(mapSetIntensityToNextWorkoutSetIntensityDetailsDTO(entity.getIntensity())) // Call renamed mapper
+                .volumeMetric(mapVolumeMetricToNextWorkoutVolumeMetricInfoDTO(entity.getVolumeMetric())) // Call renamed mapper
+                .intensityMetric(mapIntensityMetricToNextWorkoutIntensityMetricInfoDTO(entity.getIntensityMetric())) // Call renamed mapper
+                .build();
+    }
+
+    // Renamed: mapSetVolumeToDTO -> mapSetVolumeToNextWorkoutSetVolumeDetailsDTO
+    // Returns: NextWorkoutSetVolumeDetailsDTO
+    private NextWorkoutSetVolumeDetailsDTO mapSetVolumeToNextWorkoutSetVolumeDetailsDTO(SetVolume embeddable) {
+        if (embeddable == null) return null;
+        // Use new DTO name for constructor/return type
+        return new NextWorkoutSetVolumeDetailsDTO(embeddable.getMinimumVolume(), embeddable.getMaximumVolume());
+    }
+
+    // Renamed: mapSetIntensityToDTO -> mapSetIntensityToNextWorkoutSetIntensityDetailsDTO
+    // Returns: NextWorkoutSetIntensityDetailsDTO
+    private NextWorkoutSetIntensityDetailsDTO mapSetIntensityToNextWorkoutSetIntensityDetailsDTO(SetIntensity embeddable) {
+        if (embeddable == null) return null;
+        // Use new DTO name for constructor/return type
+        return new NextWorkoutSetIntensityDetailsDTO(embeddable.getMinimumIntensity(), embeddable.getMaximumIntensity());
+    }
+
+    // Renamed: mapVolumeMetricToDTO -> mapVolumeMetricToNextWorkoutVolumeMetricInfoDTO
+    // Returns: NextWorkoutVolumeMetricInfoDTO
+    private NextWorkoutVolumeMetricInfoDTO mapVolumeMetricToNextWorkoutVolumeMetricInfoDTO(VolumeMetric entity) {
+        if (entity == null) return null;
+        return NextWorkoutVolumeMetricInfoDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .isRange(entity.isRange())
+                .title(entity.getTitle())
+                .metricSymbol(entity.getMetricSymbol())
+                .build();
+    }
+
+    // Renamed: mapIntensityMetricToDTO -> mapIntensityMetricToNextWorkoutIntensityMetricInfoDTO
+    // Returns: NextWorkoutIntensityMetricInfoDTO
+    private NextWorkoutIntensityMetricInfoDTO mapIntensityMetricToNextWorkoutIntensityMetricInfoDTO(IntensityMetric entity) {
+        if (entity == null) return null;
+        return NextWorkoutIntensityMetricInfoDTO.builder() // Use new DTO name
+                .id(entity.getId())
+                .minimumIntensity(entity.getMinimumIntensity())
+                .maximumIntensity(entity.getMaximumIntensity())
+                .isRange(entity.isRange())
+                .title(entity.getTitle())
+                .metricSymbol(entity.getMetricSymbol())
+                .build();
+    }
 }

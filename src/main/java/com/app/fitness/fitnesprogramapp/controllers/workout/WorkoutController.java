@@ -4,6 +4,7 @@ import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateDoneSetDTO;
 import com.app.fitness.fitnesprogramapp.dtos.set.CompleteSetResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.workout.CompleteWorkoutResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.workout.NextWorkoutDTO;
+import com.app.fitness.fitnesprogramapp.dtos.workout.NextWorkoutDoneSetDTO;
 import com.app.fitness.fitnesprogramapp.models.set.DoneSet;
 import com.app.fitness.fitnesprogramapp.services.workout.WorkoutService;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class WorkoutController {
      * @return The updated started workout
      */
     @PostMapping("/completeSet")
-    public ResponseEntity<DoneSet> completeSet(@RequestBody CreateDoneSetDTO doneSetDTO) {
+    public ResponseEntity<NextWorkoutDoneSetDTO> completeSet(@RequestBody CreateDoneSetDTO doneSetDTO) {
         return ResponseEntity.ok((workoutService.completeSet(doneSetDTO)));
     }
 
