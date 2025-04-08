@@ -8,7 +8,9 @@ import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHisto
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHistoryResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.programhistory.ProgramHistoryDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.startprogram.StartProgramResponseDTO;
+import com.app.fitness.fitnesprogramapp.dtos.volume.DailyVolumeReportDTO;
 import com.app.fitness.fitnesprogramapp.models.program.Program;
+import com.app.fitness.fitnesprogramapp.repositories.program.ProgramRepository;
 import com.app.fitness.fitnesprogramapp.services.program.ProgramHistoryService;
 import com.app.fitness.fitnesprogramapp.services.program.ProgramService;
 import com.app.fitness.fitnesprogramapp.services.user.UserService;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,6 +40,7 @@ public class ProgramController {
     private final ProgramService programService;
     private final UserService userService;
     private final ProgramHistoryService programHistoryService;
+    private final ProgramRepository programRepository;
 
     @GetMapping
     public ResponseEntity<Page<ProgramOverviewDTO>> getAllPrograms(
@@ -87,7 +91,6 @@ public class ProgramController {
     public ResponseEntity<Page<ProgramOverviewDTO>> getStartedPrograms(Authentication authentication,
                                                                        @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage) {
         String username = authentication.getName();
-        System.out.println(username);
         return ResponseEntity.ok(programService.getStartedProgramsOverview(programsPage, username));
 
     }
@@ -109,5 +112,12 @@ public class ProgramController {
     @GetMapping("/image/{id}")
     public ResponseEntity<byte[]> getProgramImage(@PathVariable Long id) {
         return ResponseEntity.ok(programService.getProgramImage(id));
+    }
+
+    @GetMapping("/weekly-volume")
+    public ResponseEntity<List<DailyVolumeReportDTO>> getProgramWeeklyVolume(@RequestParam LocalDate startDate
+            , @RequestParam LocalDate endDate, Authentication authentication) {
+        String username = authentication.getName();
+        return ResponseEntity.ok(programHistoryService.getWeeklyVolumeReport(username, startDate, endDate));
     }
 }
