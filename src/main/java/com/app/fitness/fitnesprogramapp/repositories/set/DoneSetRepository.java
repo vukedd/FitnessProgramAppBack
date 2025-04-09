@@ -26,7 +26,6 @@ public interface DoneSetRepository extends JpaRepository<DoneSet, Long> {
             "    AND swsw.started_workouts_id = sw2.id " +
             "    AND sw2.id = swds.started_workout_id " +
             "    AND swds.done_sets_id = ds.id " +
-            "    AND sw2.finished = 1 " +
             "    AND u.username = :username " +
             "    AND ds.date BETWEEN :startDate AND :endDate " +
             "GROUP BY " +
