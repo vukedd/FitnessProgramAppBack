@@ -4,6 +4,8 @@ import com.app.fitness.fitnesprogramapp.models.set.DoneSet;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.sql.Time;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -23,5 +25,9 @@ public class StartedWorkout {
 
     private Date startDate;
     private Date doneDate;
+
+    private LocalTime startTime;
+    private LocalTime doneTime;
+
     private boolean finished;
 }

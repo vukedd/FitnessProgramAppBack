@@ -19,7 +19,6 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 public class VolumeService {
-    private final ExerciseRepository exerciseRepository;
     private final UserRepository userRepository;
 
     public Map<String, Double> getMuscleUsage(String username, Date startDate, Date endDate) {

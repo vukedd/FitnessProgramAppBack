@@ -6,6 +6,7 @@ import com.app.fitness.fitnesprogramapp.dtos.program.programhistory.StartedWeekH
 import com.app.fitness.fitnesprogramapp.dtos.program.programhistory.StartedWorkoutHistoryDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.programhistory.WorkoutExerciseHistoryDTO;
 import com.app.fitness.fitnesprogramapp.dtos.volume.DailyVolumeReportDTO;
+import com.app.fitness.fitnesprogramapp.dtos.volume.DailyWorkoutDurationReportDTO;
 import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
 import com.app.fitness.fitnesprogramapp.models.program.StartedProgram;
 import com.app.fitness.fitnesprogramapp.models.set.DoneSet;
@@ -16,9 +17,11 @@ import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
 import com.app.fitness.fitnesprogramapp.models.workout.Workout;
 import com.app.fitness.fitnesprogramapp.repositories.program.StartedProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.DoneSetRepository;
+import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.sql.Date;
@@ -31,6 +34,7 @@ public class ProgramHistoryService {
     private final StartedProgramRepository startedProgramRepository;
     private final ProgramService programService;
     private final DoneSetRepository doneSetRepository;
+    private final WorkoutRepository workoutRepository;
 
     public ProgramHistoryDTO getProgramHistory(Long startedProgramId, String username) {
         ProgramHistoryDTO programHistoryDTO = new ProgramHistoryDTO();
@@ -164,5 +168,28 @@ public class ProgramHistoryService {
         }
 
         return weeklyVolumeReport;
+    }
+
+    public List<DailyWorkoutDurationReportDTO> getWeeklyWorkoutDurationReport(String username, LocalDate startDate, LocalDate endDate) {
+        List<Object[]> weeklyWorkoutDurationRaw = workoutRepository.fetchWeeklyWorkoutDurationReport(username, startDate.toString(), endDate.toString());
+        List<DailyWorkoutDurationReportDTO> weeklyWorkoutDurationReport = new ArrayList<>();
+
+        LocalDate lastDate = endDate;
+        int rawIndex = 0;
+
+        while (weeklyWorkoutDurationReport.size() < 7) {
+            if (rawIndex < weeklyWorkoutDurationRaw.size() && lastDate.equals(((Date) weeklyWorkoutDurationRaw.get(rawIndex)[0]).toLocalDate())) {
+                weeklyWorkoutDurationReport.add(new DailyWorkoutDurationReportDTO(((BigDecimal) weeklyWorkoutDurationRaw.get(rawIndex)[1]).floatValue(), lastDate));
+                rawIndex++;
+            } else {
+                weeklyWorkoutDurationReport.add(new DailyWorkoutDurationReportDTO(0.0F, lastDate));
+            }
+
+            if (weeklyWorkoutDurationReport.size() == 7) break;
+
+            lastDate = lastDate.minusDays(1);
+        }
+
+        return weeklyWorkoutDurationReport;
     }
 }
