@@ -38,9 +38,7 @@ import java.util.Optional;
 @CrossOrigin("http://localhost:4200/")
 public class ProgramController {
     private final ProgramService programService;
-    private final UserService userService;
     private final ProgramHistoryService programHistoryService;
-    private final ProgramRepository programRepository;
 
     @GetMapping
     public ResponseEntity<Page<ProgramOverviewDTO>> getAllPrograms(
@@ -112,12 +110,5 @@ public class ProgramController {
     @GetMapping("/image/{id}")
     public ResponseEntity<byte[]> getProgramImage(@PathVariable Long id) {
         return ResponseEntity.ok(programService.getProgramImage(id));
-    }
-
-    @GetMapping("/weekly-volume")
-    public ResponseEntity<List<DailyVolumeReportDTO>> getProgramWeeklyVolume(@RequestParam LocalDate startDate
-            , @RequestParam LocalDate endDate, Authentication authentication) {
-        String username = authentication.getName();
-        return ResponseEntity.ok(programHistoryService.getWeeklyVolumeReport(username, startDate, endDate));
     }
 }

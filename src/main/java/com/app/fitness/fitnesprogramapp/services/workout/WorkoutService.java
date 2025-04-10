@@ -25,6 +25,8 @@ import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.sql.Time;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -63,6 +65,7 @@ public class WorkoutService {
             StartedWorkout newStartedWorkout = new StartedWorkout();
             newStartedWorkout.setWorkout(workoutToStart);
             newStartedWorkout.setStartDate(new Date());
+            newStartedWorkout.setStartTime(LocalTime.now());
             newStartedWorkout.setFinished(false);
 
             // Save the new started workout
@@ -347,6 +350,7 @@ public class WorkoutService {
         // Mark workout as finished
         startedWorkout.setFinished(true);
         startedWorkout.setDoneDate(new Date());
+        startedWorkout.setDoneTime(LocalTime.now());
         startedWorkout=startedWorkoutRepository.save(startedWorkout);
 
         // Check if this was the last workout in the week

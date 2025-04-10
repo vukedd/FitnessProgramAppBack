@@ -1,5 +1,6 @@
 package com.app.fitness.fitnesprogramapp.services.user;
 import com.app.fitness.fitnesprogramapp.dtos.user.UserProfileDto;
+import com.app.fitness.fitnesprogramapp.dtos.volume.DailyWorkoutDurationReportDTO;
 import com.app.fitness.fitnesprogramapp.models.user.User;
 import com.app.fitness.fitnesprogramapp.repositories.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,5 +30,4 @@ public class UserService {
 
         return new UserProfileDto(user.getUsername(), user.getEmail());
     }
-
 }
