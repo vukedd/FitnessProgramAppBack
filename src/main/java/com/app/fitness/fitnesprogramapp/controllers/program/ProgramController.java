@@ -8,6 +8,7 @@ import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHisto
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHistoryResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.programhistory.ProgramHistoryDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.startprogram.StartProgramResponseDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.update.ProgramUpdateDTO;
 import com.app.fitness.fitnesprogramapp.dtos.volume.DailyVolumeReportDTO;
 import com.app.fitness.fitnesprogramapp.models.program.Program;
 import com.app.fitness.fitnesprogramapp.repositories.program.ProgramRepository;
@@ -84,7 +85,7 @@ public class ProgramController {
 
         // Get current authenticated user
         String username = authentication.getName();
-        ProgramCreateDTO programDTO = programService.convertJsonToDTO(programJson);
+        ProgramUpdateDTO programDTO = programService.convertJsonToUpdateDTO(programJson);
 
         // Update program with the provided data
         Program updatedProgram = programService.updateProgram(id, programDTO, image, username);

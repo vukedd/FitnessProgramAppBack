@@ -15,8 +15,7 @@ public class StartedWeek {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    private Week week;
+    private Long weekId;
 
     @OneToMany
     private List<StartedWorkout> startedWorkouts=new ArrayList<>();

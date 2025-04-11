@@ -1,6 +1,6 @@
 package com.app.fitness.fitnesprogramapp.dtos.workout;
 
-import com.app.fitness.fitnesprogramapp.dtos.workout.NextWorkoutDefinitionDTO; // Renamed
+import com.app.fitness.fitnesprogramapp.dtos.program.details.WorkoutExerciseDetailsDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,7 +14,11 @@ import java.util.List;
 @AllArgsConstructor
 public class NextWorkoutDetailsDTO { // Renamed
     private Long id;
-    private NextWorkoutDefinitionDTO workout; // Renamed type
+    private String title;
+    private String description;
+    private String number;
+    private Long workoutId;
+    private List<WorkoutExerciseDetailsDTO> workoutExercises;
     private List<NextWorkoutDoneSetDTO> doneSets; // Renamed type
     private Date startDate;
     private Date doneDate;
