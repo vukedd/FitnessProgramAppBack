@@ -55,7 +55,6 @@ public class ProgramService {
     private final VolumeMetricRepository volumeMetricRepository;
     private final IntensityMetricRepository intensityMetricRepository;
     private final ObjectMapper objectMapper;
-    private final DoneSetRepository doneSetRepository;
     private final StartedProgramRepository startedProgramRepository;
 
     public Page<ProgramOverviewDTO> getAllProgramsOverview(Pageable pageable) {
@@ -348,77 +347,7 @@ public class ProgramService {
         return setRepository.save(set);
     }
 
-    public CreateExerciseHistoryResponseDTO createExerciseHistory(String username,CreateExerciseHistoryDTO historyDTO) {
-        User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        for(CreateDoneSetDTO setDTO:historyDTO.getDoneSets()){
-            WorkoutExercise workoutExercise=workoutExerciseRepository.findById(setDTO.getWorkoutExerciseId()).orElseThrow(()->new RuntimeException("Workout exercise not found!"));
-            Set set = setRepository.findById(setDTO.getSetId()).orElseThrow(()->new RuntimeException("Workout exercise set not found!"));
-            DoneSet doneSet=new DoneSet();
-            doneSet.setWorkoutExercise(workoutExercise);
-            doneSet.setSet(set);
-            doneSet.setVolume(setDTO.getVolume());
-            doneSet.setIntensity(setDTO.getIntensity());
-            doneSetRepository.save(doneSet);
-        }
-        return new CreateExerciseHistoryResponseDTO("Sets added to history");
 
-    }
-
-    public CurrentWorkoutDTO getCurrentWorkout(Long workoutId) {
-        Workout workout=workoutRepository.findById(workoutId).orElseThrow(() -> new RuntimeException("Workout not found"));
-        CurrentWorkoutDTO currentWorkoutDTO=new CurrentWorkoutDTO();
-        currentWorkoutDTO.setId(workout.getId());
-        currentWorkoutDTO.setWorkoutExercises(new ArrayList<>());
-        for(WorkoutExercise workoutExercise:workout.getWorkoutExercises()){
-            CurrentWorkoutExerciseDTO currentWorkoutExerciseDTO=new CurrentWorkoutExerciseDTO();
-            currentWorkoutExerciseDTO.setId(workoutExercise.getId());
-            currentWorkoutExerciseDTO.setExercise(new ExerciseDetailsDTO(workoutExercise.getExercise().getId(),workoutExercise.getExercise().getTitle(),workoutExercise.getExercise().getDescription()));
-            currentWorkoutExerciseDTO.setMinimumRestTime(workoutExercise.getMinimumRestTime());
-            currentWorkoutExerciseDTO.setMaximumRestTime(workoutExercise.getMaximumRestTime());
-            currentWorkoutExerciseDTO.setSets(new ArrayList<>());
-            currentWorkoutDTO.getWorkoutExercises().add(currentWorkoutExerciseDTO);
-            for(Set set:workoutExercise.getSets()){
-                CurrentSetDTO setDetailsDTO=new CurrentSetDTO();
-                setDetailsDTO.setId(set.getId());
-
-                // Map volume
-                SetVolumeDetailsDTO volumeDTO = new SetVolumeDetailsDTO(
-                        set.getVolume().getMinimumVolume(),
-                        set.getVolume().getMaximumVolume()
-                );
-                setDetailsDTO.setVolume(volumeDTO);
-
-                // Map intensity
-                SetIntensityDetailsDTO intensityDTO = new SetIntensityDetailsDTO(
-                        set.getIntensity().getMinimumIntensity(),
-                        set.getIntensity().getMaximumIntensity()
-                );
-                setDetailsDTO.setIntensity(intensityDTO);
-
-                // Map volume metric
-                VolumeMetricDetailsDTO volumeMetricDTO = new VolumeMetricDetailsDTO();
-                volumeMetricDTO.setId(set.getVolumeMetric().getId());
-                volumeMetricDTO.setRange(set.getVolumeMetric().isRange());
-                volumeMetricDTO.setTitle(set.getVolumeMetric().getTitle());
-                volumeMetricDTO.setMetricSymbol(set.getVolumeMetric().getMetricSymbol());
-                setDetailsDTO.setVolumeMetric(volumeMetricDTO);
-
-                // Map intensity metric
-                IntensityMetricDetailsDTO intensityMetricDTO = new IntensityMetricDetailsDTO();
-                intensityMetricDTO.setId(set.getIntensityMetric().getId());
-                intensityMetricDTO.setMinimumIntensity(set.getIntensityMetric().getMinimumIntensity());
-                intensityMetricDTO.setMaximumIntensity(set.getIntensityMetric().getMaximumIntensity());
-                intensityMetricDTO.setRange(set.getIntensityMetric().isRange());
-                intensityMetricDTO.setTitle(set.getIntensityMetric().getTitle());
-                intensityMetricDTO.setMetricSymbol(set.getIntensityMetric().getMetricSymbol());
-                setDetailsDTO.setIntensityMetric(intensityMetricDTO);
-                currentWorkoutExerciseDTO.getSets().add(setDetailsDTO);
-
-            }
-        }
-        return currentWorkoutDTO;
-    }
 
     public StartProgramResponseDTO startProgram(Long programId,String username) {
         Program program=programRepository.findById(programId).orElseThrow(() -> new RuntimeException("Program not found!"));
@@ -431,5 +360,60 @@ public class ProgramService {
         userRepository.save(user);
         return new StartProgramResponseDTO(startedProgram.getId(),program.getTitle());
 
+    }
+
+    @Transactional
+    public Program updateProgram(Long programId, ProgramCreateDTO programDTO, MultipartFile image, String username) {
+        // Get current user
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Find the existing program
+        Program program = programRepository.findById(programId)
+                .orElseThrow(() -> new RuntimeException("Program not found"));
+
+        // Check if the current user is the creator of the program
+        if (!program.getCreator().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("You don't have permission to edit this program");
+        }
+
+        // Update program details
+        program.setTitle(programDTO.getName());
+
+        // Process image if provided
+        // Set image data whether it's null or not
+        if (image != null && !image.isEmpty()) {
+            try {
+                program.setImageData(image.getBytes());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            // Explicitly set image data to null when image is null or empty
+            program.setImageData(null);
+        }
+
+        // Delete existing weeks and their related entities
+        List<Week> existingWeeks = program.getWeeks();
+        for (Week week : existingWeeks) {
+            for (Workout workout : week.getWorkouts()) {
+                for (WorkoutExercise workoutExercise : workout.getWorkoutExercises()) {
+                    setRepository.deleteAll(workoutExercise.getSets());
+                    workoutExerciseRepository.delete(workoutExercise);
+                }
+                workoutRepository.delete(workout);
+            }
+            weekRepository.delete(week);
+        }
+
+        // Create new weeks, workouts, exercises and sets
+        List<Week> weeks = new ArrayList<>();
+        for (WeekDTO weekDTO : programDTO.getWeeks()) {
+            Week week = createWeek(weekDTO);
+            weeks.add(week);
+        }
+
+        program.setWeeks(weeks);
+        return programRepository.save(program);
     }
 }

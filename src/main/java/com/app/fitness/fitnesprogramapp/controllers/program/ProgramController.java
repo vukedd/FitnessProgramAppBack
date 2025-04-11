@@ -75,6 +75,25 @@ public class ProgramController {
 
     }
 
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateProgram(
+            @PathVariable Long id,
+            @RequestPart("program") String programJson,
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            Authentication authentication) {
+
+        // Get current authenticated user
+        String username = authentication.getName();
+        ProgramCreateDTO programDTO = programService.convertJsonToDTO(programJson);
+
+        // Update program with the provided data
+        Program updatedProgram = programService.updateProgram(id, programDTO, image, username);
+
+        // Return the updated program ID
+        return ResponseEntity.ok()
+                .body(Map.of("id", updatedProgram.getId(), "message", "Program updated successfully"));
+    }
+
     @PostMapping("/start-program/{programId}")
     public ResponseEntity<StartProgramResponseDTO> startProgram(
         @PathVariable Long programId,
