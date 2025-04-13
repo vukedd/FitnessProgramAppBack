@@ -1,5 +1,6 @@
 package com.app.fitness.fitnesprogramapp.models.workout;
 
+import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
 import com.app.fitness.fitnesprogramapp.models.set.DoneSet;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -17,17 +18,23 @@ public class StartedWorkout {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    private Workout workout;
+    private String title;
+    private String description;
+    private String number;
+
+    private Long workoutId;
 
     @OneToMany
     private List<DoneSet> doneSets=new ArrayList<>();
 
+    @OneToMany
+    @JoinTable(
+            inverseJoinColumns = @JoinColumn(name = "workout_exercise_id")
+    )
+    private List<WorkoutExercise> workoutExercises;
+
     private Date startDate;
     private Date doneDate;
-
-    private LocalTime startTime;
-    private LocalTime doneTime;
 
     private boolean finished;
 }

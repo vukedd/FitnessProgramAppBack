@@ -1,4 +1,4 @@
-package com.app.fitness.fitnesprogramapp.dtos.program;
+package com.app.fitness.fitnesprogramapp.dtos.program.update;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,9 +9,10 @@ import java.util.List;
 @Data
 @Builder
 @AllArgsConstructor
-public class WorkoutExerciseDTO {
+public class UpdateWorkoutExerciseDTO {
+    private int id;
     private Long exercise; // Exercise ID
     private int minimumRestTime;
     private int maximumRestTime;
-    private List<CreateSetDTO> sets;
+    private List<UpdateWorkoutExerciseSetDTO> sets;
 }

@@ -1,6 +1,10 @@
 package com.app.fitness.fitnesprogramapp.services.workout;
 
+import com.app.fitness.fitnesprogramapp.dtos.exercise.ChangeExerciseOrderDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.CreateSetDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.details.WorkoutExerciseDetailsDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateDoneSetDTO;
+import com.app.fitness.fitnesprogramapp.dtos.set.AddSetDTO;
 import com.app.fitness.fitnesprogramapp.dtos.set.CompleteSetResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.workout.*;
 import com.app.fitness.fitnesprogramapp.models.exercise.Exercise;
@@ -11,17 +15,21 @@ import com.app.fitness.fitnesprogramapp.models.program.Program;
 import com.app.fitness.fitnesprogramapp.models.program.StartedProgram;
 import com.app.fitness.fitnesprogramapp.models.set.*;
 import com.app.fitness.fitnesprogramapp.models.set.Set;
+import com.app.fitness.fitnesprogramapp.models.user.User;
 import com.app.fitness.fitnesprogramapp.models.week.StartedWeek;
 import com.app.fitness.fitnesprogramapp.models.week.Week;
 import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
 import com.app.fitness.fitnesprogramapp.models.workout.Workout;
+import com.app.fitness.fitnesprogramapp.repositories.exercise.ExerciseRepository;
 import com.app.fitness.fitnesprogramapp.repositories.exercise.WorkoutExerciseRepository;
 import com.app.fitness.fitnesprogramapp.repositories.program.StartedProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.DoneSetRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.SetRepository;
+import com.app.fitness.fitnesprogramapp.repositories.user.UserRepository;
 import com.app.fitness.fitnesprogramapp.repositories.week.StartedWeekRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.StartedWorkoutRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
+import com.app.fitness.fitnesprogramapp.services.program.ProgramService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -40,14 +48,20 @@ public class WorkoutService {
     private final WorkoutExerciseRepository workoutExerciseRepository;
     private final SetRepository setRepository;
     private final WorkoutRepository workoutRepository;
+    private final ProgramService programService; // For workout exercise mapping
+    private final UserRepository userRepository;
+    private final ExerciseRepository exerciseRepository;
 
     /**
      * Processes the next workout request for a given program ID
      * @param programId The started program ID
      * @return NextWorkoutDTO with details, or null if program not found
      */
-    public NextWorkoutDTO processNextWorkout(Long programId) {
-        Optional<StartedProgram> startedProgramOpt = startedProgramRepository.findById(programId);
+    public NextWorkoutDTO processNextWorkout(Long programId,String username) {
+        User user=userRepository.findByUsername(username).orElseThrow();
+        Optional<StartedProgram> startedProgramOpt = user.getStartedPrograms().stream().filter(
+                sp->sp.getId().equals(programId)
+        ).findFirst();
 
         if (startedProgramOpt.isEmpty()) {
             return null;
@@ -58,34 +72,312 @@ public class WorkoutService {
 
         // If we need to start a new workout, create it and save
         if (nextWorkoutDTO.getNextWorkoutDetails() != null && "start".equals(nextWorkoutDTO.getAction())) {
-            Workout workoutToStart = nextWorkoutDTO.getNextWorkoutDetails().getWorkout().getId() != null ?
-                    workoutRepository.findById(nextWorkoutDTO.getNextWorkoutDetails().getWorkout().getId()).orElseThrow():null;
+            Workout workoutToStart = workoutRepository.findById(nextWorkoutDTO.getNextWorkoutDetails().getWorkoutId())
+                    .orElseThrow(() -> new RuntimeException("Workout not found"));
 
-            // Create and persist a real started workout instance
-            StartedWorkout newStartedWorkout = new StartedWorkout();
-            newStartedWorkout.setWorkout(workoutToStart);
+            // Create a deep copy of the workout
+            StartedWorkout newStartedWorkout = createStartedWorkoutFromWorkout(workoutToStart);
             newStartedWorkout.setStartDate(new Date());
-            newStartedWorkout.setStartTime(LocalTime.now());
             newStartedWorkout.setFinished(false);
 
             // Save the new started workout
             StartedWorkout savedWorkout = startedWorkoutRepository.save(newStartedWorkout);
 
             // Add it to the latest started week
-            startedProgram.getStartedWeeks().getLast()
-                    .getStartedWorkouts().add(savedWorkout);
+            StartedWeek latestStartedWeek = startedProgram.getStartedWeeks().getLast();
+            latestStartedWeek.getStartedWorkouts().add(savedWorkout);
 
             // Save the started week
-            startedWeekRepository.save(startedProgram.getStartedWeeks().get(startedProgram.getStartedWeeks().size() - 1));
-
-            // Save the program
-            startedProgramRepository.save(startedProgram);
+            startedWeekRepository.save(latestStartedWeek);
 
             // Update the DTO with the persisted started workout
             nextWorkoutDTO.setNextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(savedWorkout));
         }
 
         return nextWorkoutDTO;
+    }
+
+    /**
+     * Creates a deep copy of Workout into StartedWorkout
+     * @param workout The original workout
+     * @return A new StartedWorkout with copied properties
+     */
+    private StartedWorkout createStartedWorkoutFromWorkout(Workout workout) {
+        StartedWorkout startedWorkout = new StartedWorkout();
+
+        // Copy basic properties
+        startedWorkout.setTitle(workout.getTitle());
+        startedWorkout.setDescription(workout.getDescription());
+        startedWorkout.setNumber(workout.getNumber());
+        startedWorkout.setWorkoutId(workout.getId()); // Store the original workout ID
+
+        startedWorkout.setWorkoutExercises(new ArrayList<>());
+        for(WorkoutExercise workoutExercise: workout.getWorkoutExercises()) {
+            WorkoutExercise exercise = new WorkoutExercise();
+            exercise.setExercise(workoutExercise.getExercise());
+            exercise.setMaximumRestTime(workoutExercise.getMaximumRestTime());
+            exercise.setMinimumRestTime(workoutExercise.getMinimumRestTime());
+            exercise.setPosition(workoutExercise.getPosition());
+            exercise.setSets(new ArrayList<>());
+            for(Set set: workoutExercise.getSets()) {
+                Set s = new Set();
+                SetIntensity intensity = new SetIntensity();
+                SetVolume volume = new SetVolume();
+                intensity.setMaximumIntensity(set.getIntensity().getMaximumIntensity());
+                intensity.setMinimumIntensity(set.getIntensity().getMinimumIntensity());
+                volume.setMaximumVolume(set.getVolume().getMaximumVolume());
+                volume.setMinimumVolume(set.getVolume().getMinimumVolume());
+                s.setIntensity(intensity);
+                s.setVolume(volume);
+                s.setIntensityMetric(set.getIntensityMetric());
+                s.setVolumeMetric(set.getVolumeMetric());
+                setRepository.save(s);
+                exercise.getSets().add(s);
+            }
+            workoutExerciseRepository.save(exercise);
+            startedWorkout.getWorkoutExercises().add(exercise);
+
+        }
+
+        startedWorkout.setDoneSets(new ArrayList<>());
+
+        return startedWorkout;
+    }
+
+    /**
+     * Gets the next workout for a user based on their started program
+     * @param startedProgram The program the user has started
+     * @return NextWorkoutDTO containing the next workout and action details
+     */
+    public NextWorkoutDTO getNextWorkout(StartedProgram startedProgram) {
+        // Check if program is finished
+        if (startedProgram.isFinished()) {
+            return NextWorkoutDTO.builder()
+                    .message("Program is already completed")
+                    .build();
+        }
+
+        // Get the current started weeks
+        List<StartedWeek> startedWeeks = startedProgram.getStartedWeeks();
+
+        if (startedWeeks.isEmpty()) {
+            // No weeks started yet, start the first week of the program
+            return startFirstWeek(startedProgram);
+        }
+
+        // Sort weeks by ID to ensure we get the latest one
+        startedWeeks.sort(Comparator.comparing(StartedWeek::getId));
+        StartedWeek latestStartedWeek = startedWeeks.getLast();
+
+        if (!latestStartedWeek.isFinished()) {
+            // Week is not finished, look for the next workout to do in this week
+            return getNextWorkoutInWeek(latestStartedWeek, startedProgram.getProgram(),startedProgram);
+        } else {
+            // Current week is finished, start next week
+            return startNextWeek(startedProgram);
+        }
+    }
+
+    /**
+     * Gets the next workout to do in the current week
+     * @param startedWeek The current week
+     * @param program The program containing the week
+     * @return NextWorkoutDTO with the next workout and action
+     */
+    private NextWorkoutDTO getNextWorkoutInWeek(StartedWeek startedWeek, Program program,StartedProgram startedProgram) {
+        // Get the original week from program using weekId
+
+        Optional<Week> optionalWeek = program.getWeeks().stream()
+                .filter(w -> w.getId().equals(startedWeek.getWeekId()))
+                .findFirst();
+
+        List<Workout> originalWeekWorkouts;
+        if (optionalWeek.isPresent()) {
+            originalWeekWorkouts=optionalWeek.get().getWorkouts();
+        }
+        else{
+            originalWeekWorkouts=new ArrayList<>();
+        }
+
+        List<StartedWorkout> startedWorkouts = startedWeek.getStartedWorkouts();
+
+        if (startedWorkouts.isEmpty()) {
+            // No workouts started in this week, start the first workout in this week
+            if (originalWeekWorkouts.isEmpty()) {
+                return NextWorkoutDTO.builder()
+                        .message("No workouts defined for this week")
+                        .build();
+            }
+
+            // Start the first workout of the week
+            Workout nextWorkout = originalWeekWorkouts.getFirst();
+
+            return NextWorkoutDTO.builder()
+                    .nextWorkoutDetails(createNextWorkoutDetailsDTO(nextWorkout))
+                    .action("start")
+                    .build();
+        }
+
+        // Check if there's an unfinished workout
+        Optional<StartedWorkout> unfinishedWorkout = startedWorkouts.stream()
+                .filter(w -> !w.isFinished())
+                .findFirst();
+
+        if (unfinishedWorkout.isPresent()) {
+            // Continue with the unfinished workout
+            return NextWorkoutDTO.builder()
+                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(unfinishedWorkout.get()))
+                    .action("continue")
+                    .build();
+        }
+
+        // All started workouts are finished, find the next workout in the week
+        // Collect IDs of already started workouts
+        java.util.Set<Long> startedWorkoutIds = startedWorkouts.stream()
+                .map(StartedWorkout::getWorkoutId)
+                .collect(Collectors.toSet());
+
+        // Find the first workout in the original week that hasn't been started yet
+        Optional<Workout> nextWorkout = originalWeekWorkouts.stream()
+                .filter(workout -> !startedWorkoutIds.contains(workout.getId()))
+                .findFirst();
+
+        if (nextWorkout.isPresent()) {
+            // Start the next workout
+            return NextWorkoutDTO.builder()
+                    .nextWorkoutDetails(createNextWorkoutDetailsDTO(nextWorkout.get()))
+                    .action("start")
+                    .build();
+        } else {
+            // All workouts in this week have been started and finished
+            // Mark the week as finished
+            startedWeek.setFinished(true);
+            startedWeek.setDoneDate(new Date());
+            startedWeekRepository.save(startedWeek);
+
+            return NextWorkoutDTO.builder()
+                    .message("Week completed")
+                    .build();
+        }
+    }
+
+    /**
+     * Creates NextWorkoutDetailsDTO from a Workout
+     * Used for workouts that haven't been started yet
+     */
+    private NextWorkoutDetailsDTO createNextWorkoutDetailsDTO(Workout workout) {
+        // Create a new NextWorkoutDetailsDTO using the builder pattern
+        return NextWorkoutDetailsDTO.builder()
+                .workoutId(workout.getId())
+                .title(workout.getTitle())
+                .description(workout.getDescription())
+                .number(workout.getNumber())
+                .workoutExercises(programService.mapWorkoutExercisesToDetailsDTOs(workout.getWorkoutExercises()))
+                .doneSets(new ArrayList<>())
+                .finished(false)
+                .build();
+    }
+
+    /**
+     * Starts the first week of a program
+     * @param startedProgram The program to start
+     * @return NextWorkoutDTO with the first workout
+     */
+    private NextWorkoutDTO startFirstWeek(StartedProgram startedProgram) {
+        Program program = startedProgram.getProgram();
+        List<Week> programWeeks = program.getWeeks();
+
+        if (programWeeks.isEmpty()) {
+            return NextWorkoutDTO.builder()
+                    .message("No weeks defined for this program")
+                    .build();
+        }
+
+        // Get the first week
+        Week firstWeek = programWeeks.getFirst();
+
+        // Create a new started week (as a copy of the first week)
+        StartedWeek newStartedWeek = new StartedWeek();
+        newStartedWeek.setWeekId(firstWeek.getId());
+        newStartedWeek.setStartDate(new Date());
+        newStartedWeek.setFinished(false);
+        newStartedWeek.setStartedWorkouts(new ArrayList<>());
+        startedWeekRepository.save(newStartedWeek);
+
+        // Add to the started program
+        startedProgram.getStartedWeeks().add(newStartedWeek);
+        startedProgramRepository.save(startedProgram);
+
+        // Get the first workout of the first week
+        if (firstWeek.getWorkouts().isEmpty()) {
+            return NextWorkoutDTO.builder()
+                    .message("No workouts defined for the first week")
+                    .build();
+        }
+
+        Workout firstWorkout = firstWeek.getWorkouts().getFirst();
+
+        return NextWorkoutDTO.builder()
+                .nextWorkoutDetails(createNextWorkoutDetailsDTO(firstWorkout))
+                .action("start")
+                .build();
+    }
+
+    /**
+     * Starts the next week after a completed week
+     * @param startedProgram The program with the next week to start
+     * @return NextWorkoutDTO with the first workout of the next week
+     */
+    private NextWorkoutDTO startNextWeek(StartedProgram startedProgram) {
+        Program program = startedProgram.getProgram();
+        List<Week> programWeeks = program.getWeeks();
+
+        // Collect IDs of all weeks that have already been started
+        java.util.Set<Long> startedWeekIds = startedProgram.getStartedWeeks().stream()
+                .map(StartedWeek::getWeekId)
+                .collect(Collectors.toSet());
+
+        // Find the first week in the program that hasn't been started yet
+        Optional<Week> nextWeek = programWeeks.stream()
+                .filter(week -> !startedWeekIds.contains(week.getId()))
+                .findFirst();
+
+        if (nextWeek.isPresent()) {
+            // Create a new started week
+            StartedWeek newStartedWeek = new StartedWeek();
+            newStartedWeek.setWeekId(nextWeek.get().getId());
+            newStartedWeek.setStartDate(new Date());
+            newStartedWeek.setFinished(false);
+            newStartedWeek.setStartedWorkouts(new ArrayList<>());
+            startedWeekRepository.save(newStartedWeek);
+
+            // Add to the started program
+            startedProgram.getStartedWeeks().add(newStartedWeek);
+            startedProgramRepository.save(startedProgram);
+
+            // Get the first workout of the next week
+            if (nextWeek.get().getWorkouts().isEmpty()) {
+                return NextWorkoutDTO.builder()
+                        .message("No workouts defined for the next week")
+                        .build();
+            }
+
+            Workout firstWorkout = nextWeek.get().getWorkouts().getFirst();
+
+            return NextWorkoutDTO.builder()
+                    .nextWorkoutDetails(createNextWorkoutDetailsDTO(firstWorkout))
+                    .action("start")
+                    .build();
+        } else {
+            // No more weeks to start, program is completed
+            startedProgram.setFinished(true);
+            startedProgram.setDoneDate(new Date());
+            startedProgramRepository.save(startedProgram);
+
+            return NextWorkoutDTO.builder()
+                    .message("Program completed")
+                    .build();
+        }
     }
 
     /**
@@ -115,231 +407,10 @@ public class WorkoutService {
         return mapDoneSetToNextWorkoutDoneSetDTO(doneSet);
     }
 
-    /**
-     * Gets the next workout for a user based on their started program
-     * @param startedProgram The program the user has started
-     * @return NextWorkoutDTO containing the next workout and action details
-     */
-    public NextWorkoutDTO getNextWorkout(StartedProgram startedProgram) {
-        // Check if program is finished
-        if (startedProgram.isFinished()) {
-            return NextWorkoutDTO.builder()
-                    .message("Program is already completed")
-                    .build();
-        }
-
-        // Get the last started week
-        List<StartedWeek> startedWeeks = startedProgram.getStartedWeeks();
-
-        if (startedWeeks.isEmpty()) {
-            // No weeks started yet, start the first week of the program
-            return startFirstWeek(startedProgram);
-        }
-
-        // Sort weeks by ID to ensure we get the latest one
-        startedWeeks.sort(Comparator.comparing(StartedWeek::getId));
-        StartedWeek latestStartedWeek = startedWeeks.get(startedWeeks.size() - 1);
-
-        if (!latestStartedWeek.isFinished()) {
-            // Week is not finished, look for the next workout to do in this week
-            return getNextWorkoutInWeek(latestStartedWeek);
-        } else {
-            // Current week is finished, start next week
-            return startNextWeek(startedProgram, latestStartedWeek);
-        }
-    }
-
-    /**
-     * Gets the next workout to do in the current week
-     * @param startedWeek The current week
-     * @return NextWorkoutDTO with the next workout and action
-     */
-    private NextWorkoutDTO getNextWorkoutInWeek(StartedWeek startedWeek) {
-        List<StartedWorkout> startedWorkouts = startedWeek.getStartedWorkouts();
-
-        if (startedWorkouts.isEmpty()) {
-            // No workouts started in this week, start the first workout
-            Week week = startedWeek.getWeek();
-            if (week.getWorkouts().isEmpty()) {
-                return NextWorkoutDTO.builder()
-                        .message("No workouts defined for this week")
-                        .build();
-            }
-
-            // Create a non-persisted StartedWorkout with the workout to start
-            Workout nextWorkout = week.getWorkouts().get(0);
-            StartedWorkout tempStartedWorkout = new StartedWorkout();
-            tempStartedWorkout.setWorkout(nextWorkout);
-
-            return NextWorkoutDTO.builder()
-                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(tempStartedWorkout))
-                    .action("start")
-                    .build();
-        }
-
-        // Sort workouts by ID to get the latest one
-        startedWorkouts.sort(Comparator.comparing(StartedWorkout::getId));
-        StartedWorkout latestWorkout = startedWorkouts.getLast();
-
-        if (!latestWorkout.isFinished()) {
-            // Latest workout is not finished, continue it
-            return NextWorkoutDTO.builder()
-                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(latestWorkout))
-                    .action("continue")
-                    .build();
-        }
-
-        // Latest workout is finished, find the next one in the week
-        Week week = startedWeek.getWeek();
-        List<Workout> weekWorkouts = week.getWorkouts();
-
-        // Find the index of the current workout in the week's workout list
-        int currentWorkoutIndex = -1;
-        for (int i = 0; i < weekWorkouts.size(); i++) {
-            if (weekWorkouts.get(i).getId().equals(latestWorkout.getWorkout().getId())) {
-                currentWorkoutIndex = i;
-                break;
-            }
-        }
-
-        // Check if there's a next workout in this week
-        if (currentWorkoutIndex < weekWorkouts.size() - 1) {
-            Workout nextWorkout = weekWorkouts.get(currentWorkoutIndex + 1);
-
-            // Create a non-persisted StartedWorkout with the workout to start
-            StartedWorkout tempStartedWorkout = new StartedWorkout();
-            tempStartedWorkout.setWorkout(nextWorkout);
-
-            return NextWorkoutDTO.builder()
-                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(tempStartedWorkout))
-                    .action("start")
-                    .build();
-        }
-
-        // No more workouts in this week, mark week as finished
-        startedWeek.setFinished(true);
-        startedWeek.setDoneDate(new Date());
-        return NextWorkoutDTO.builder()
-                .message("Week completed")
-                .build();
-    }
-
-    /**
-     * Starts the first week of a program
-     * @param startedProgram The program to start
-     * @return NextWorkoutDTO with the first workout
-     */
-    private NextWorkoutDTO startFirstWeek(StartedProgram startedProgram) {
-        Program program = startedProgram.getProgram();
-        List<Week> programWeeks = program.getWeeks();
-
-        if (programWeeks.isEmpty()) {
-            return NextWorkoutDTO.builder()
-                    .message("No weeks defined for this program")
-                    .build();
-        }
-
-        // Get the first week
-        Week firstWeek = programWeeks.get(0);
-
-        // Create a new started week
-        StartedWeek newStartedWeek = new StartedWeek();
-        newStartedWeek.setWeek(firstWeek);
-        newStartedWeek.setStartDate(new Date());
-        newStartedWeek.setFinished(false);
-        startedWeekRepository.save(newStartedWeek);
-
-        // Add to the started program
-        startedProgram.getStartedWeeks().add(newStartedWeek);
-        startedProgramRepository.save(startedProgram);
-
-        // Get the first workout of the first week
-        if (firstWeek.getWorkouts().isEmpty()) {
-            return NextWorkoutDTO.builder()
-                    .message("No workouts defined for the first week")
-                    .build();
-        }
-
-        Workout firstWorkout = firstWeek.getWorkouts().getFirst();
-
-        // Create a non-persisted StartedWorkout with the workout to start
-        StartedWorkout tempStartedWorkout = new StartedWorkout();
-        tempStartedWorkout.setWorkout(firstWorkout);
-
-        return NextWorkoutDTO.builder()
-                .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(tempStartedWorkout))
-                .action("start")
-                .build();
-    }
-
-    /**
-     * Starts the next week after a completed week
-     * @param startedProgram The program
-     * @param completedStartedWeek The completed week
-     * @return NextWorkoutDTO with the first workout of the next week
-     */
-    private NextWorkoutDTO startNextWeek(StartedProgram startedProgram, StartedWeek completedStartedWeek) {
-        Program program = startedProgram.getProgram();
-        List<Week> programWeeks = program.getWeeks();
-
-        // Find the index of the completed week in the program's week list
-        int completedWeekIndex = -1;
-        Week completedWeek = completedStartedWeek.getWeek();
-
-        for (int i = 0; i < programWeeks.size(); i++) {
-            if (programWeeks.get(i).getId().equals(completedWeek.getId())) {
-                completedWeekIndex = i;
-                break;
-            }
-        }
-
-        // Check if there's a next week in the program
-        if (completedWeekIndex < programWeeks.size() - 1) {
-            // There's a next week, start it
-            Week nextWeek = programWeeks.get(completedWeekIndex + 1);
-
-            // Create a new started week
-            StartedWeek newStartedWeek = new StartedWeek();
-            newStartedWeek.setWeek(nextWeek);
-            newStartedWeek.setStartDate(new Date());
-            newStartedWeek.setFinished(false);
-            startedWeekRepository.save(newStartedWeek);
-
-            // Add to the started program
-            startedProgram.getStartedWeeks().add(newStartedWeek);
-            startedProgramRepository.save(startedProgram);
-
-            // Get the first workout of the next week
-            if (nextWeek.getWorkouts().isEmpty()) {
-                return NextWorkoutDTO.builder()
-                        .message("No workouts defined for the next week")
-                        .build();
-            }
-
-            Workout firstWorkout = nextWeek.getWorkouts().get(0);
-
-            // Create a non-persisted StartedWorkout with the workout to start
-            StartedWorkout tempStartedWorkout = new StartedWorkout();
-            tempStartedWorkout.setWorkout(firstWorkout);
-
-            return NextWorkoutDTO.builder()
-                    .nextWorkoutDetails(mapStartedWorkoutToNextWorkoutDetailsDTO(tempStartedWorkout))
-                    .action("start")
-                    .build();
-        } else {
-            // No more weeks, program is completed
-            startedProgram.setFinished(true);
-            startedProgram.setDoneDate(new Date());
-            startedProgramRepository.save(startedProgram);
-            return NextWorkoutDTO.builder()
-                    .message("Program completed")
-                    .build();
-        }
-    }
-
     public CompleteWorkoutResponseDTO completeWorkout(Long startedWorkoutId, Long startedProgramId) {
         StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
         StartedProgram startedProgram = startedProgramRepository.findById(startedProgramId).orElseThrow();
+
         // Find the started week for this workout
         StartedWeek startedWeek =
                 startedProgram.getStartedWeeks().stream()
@@ -350,45 +421,53 @@ public class WorkoutService {
         // Mark workout as finished
         startedWorkout.setFinished(true);
         startedWorkout.setDoneDate(new Date());
-        startedWorkout.setDoneTime(LocalTime.now());
-        startedWorkout=startedWorkoutRepository.save(startedWorkout);
+        startedWorkout = startedWorkoutRepository.save(startedWorkout);
 
         // Check if this was the last workout in the week
-        checkWeekCompletion(startedWeek);
+        checkWeekCompletion(startedWeek, startedProgram.getProgram());
 
         // Check if this was the last week in the program
         if (startedWeek.isFinished()) {
             checkProgramCompletion(startedProgram);
         }
 
-        return new CompleteWorkoutResponseDTO(startedWorkoutId,"Successfully completed workout!");
+        return new CompleteWorkoutResponseDTO(startedWorkoutId, "Successfully completed workout!");
     }
 
     /**
      * Checks if all workouts in a week have been completed
      * @param startedWeek The week to check
+     * @param program The program containing the week
      */
-    private void checkWeekCompletion(StartedWeek startedWeek) {
-        Week week = startedWeek.getWeek();
-        List<Workout> weekWorkouts = week.getWorkouts();
+    private void checkWeekCompletion(StartedWeek startedWeek, Program program) {
+        // Get the original week from program using weekId
+        Optional<Week> optionalWeek = program.getWeeks().stream()
+                .filter(w -> w.getId().equals(startedWeek.getWeekId()))
+                .findFirst();
+        List<Workout> originalWeekWorkouts;
+        if (optionalWeek.isPresent()) {
+            originalWeekWorkouts=optionalWeek.get().getWorkouts();
+        }
+        else{
+            originalWeekWorkouts=new ArrayList<>();
+        }
+
         List<StartedWorkout> startedWorkouts = startedWeek.getStartedWorkouts();
 
-        // Check if we have started and finished all workouts in the week
-        if (startedWorkouts.size() == weekWorkouts.size()) {
-            boolean allWorkoutsFinished = true;
+        // Collect IDs of all workouts that have been started and finished
+        java.util.Set<Long> finishedWorkoutIds = startedWorkouts.stream()
+                .filter(StartedWorkout::isFinished)
+                .map(StartedWorkout::getWorkoutId)
+                .collect(Collectors.toSet());
 
-            for (StartedWorkout startedWorkout : startedWorkouts) {
-                if (!startedWorkout.isFinished()) {
-                    allWorkoutsFinished = false;
-                    break;
-                }
-            }
+        // Check if all workouts in the original week have been started and finished
+        boolean allWorkoutsFinished = originalWeekWorkouts.stream()
+                .allMatch(workout -> finishedWorkoutIds.contains(workout.getId()));
 
-            if (allWorkoutsFinished) {
-                startedWeek.setFinished(true);
-                startedWeek.setDoneDate(new Date());
-                startedWeekRepository.save(startedWeek);
-            }
+        if (allWorkoutsFinished) {
+            startedWeek.setFinished(true);
+            startedWeek.setDoneDate(new Date());
+            startedWeekRepository.save(startedWeek);
         }
     }
 
@@ -401,31 +480,30 @@ public class WorkoutService {
         List<Week> programWeeks = program.getWeeks();
         List<StartedWeek> startedWeeks = startedProgram.getStartedWeeks();
 
-        // Check if we have started and finished all weeks in the program
-        if (startedWeeks.size() == programWeeks.size()) {
-            boolean allWeeksFinished = true;
+        // Collect IDs of all weeks that have been started and finished
+        java.util.Set<Long> finishedWeekIds = startedWeeks.stream()
+                .filter(StartedWeek::isFinished)
+                .map(StartedWeek::getWeekId)
+                .collect(Collectors.toSet());
 
-            for (StartedWeek startedWeek : startedWeeks) {
-                if (!startedWeek.isFinished()) {
-                    allWeeksFinished = false;
-                    break;
-                }
-            }
+        // Check if all weeks in the program have been started and finished
+        boolean allWeeksFinished = programWeeks.stream()
+                .allMatch(week -> finishedWeekIds.contains(week.getId()));
 
-            if (allWeeksFinished) {
-                startedProgram.setFinished(true);
-                startedProgram.setDoneDate(new Date());
-                startedProgramRepository.save(startedProgram);
-            }
+        if (allWeeksFinished) {
+            startedProgram.setFinished(true);
+            startedProgram.setDoneDate(new Date());
+            startedProgramRepository.save(startedProgram);
         }
     }
 
     /**
      * Uncompletes a previously completed set
      * @param doneSetId The ID of the completed set to remove
+     * @param startedWorkoutId The ID of the started workout containing the set
      * @return Response with success message
      */
-    public CompleteSetResponseDTO uncompleteSet(Long doneSetId,Long startedWorkoutId) {
+    public CompleteSetResponseDTO uncompleteSet(Long doneSetId, Long startedWorkoutId) {
         DoneSet doneSet = doneSetRepository.findById(doneSetId).orElseThrow();
         StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
         startedWorkout.getDoneSets().remove(doneSet);
@@ -435,180 +513,261 @@ public class WorkoutService {
         return new CompleteSetResponseDTO(doneSetId, "Successfully removed completed set from workout!");
     }
 
-    private NextWorkoutDetailsDTO mapStartedWorkoutToNextWorkoutDetailsDTO(StartedWorkout entity) {
-        if (entity == null) return null;
-        return NextWorkoutDetailsDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .workout(mapWorkoutToNextWorkoutDefinitionDTO(entity.getWorkout())) // Call renamed mapper
-                .doneSets(mapDoneSetListToNextWorkoutDoneSetDTOList(entity.getDoneSets())) // Call renamed list mapper
-                .startDate(entity.getStartDate())
-                .doneDate(entity.getDoneDate())
-                .finished(entity.isFinished())
+    public AddSetDTO addSet(Long startedWorkoutId,Long workoutExerciseId, CreateSetDTO createSetDTO) {
+        Set newSet=programService.createWorkoutExerciseSet(createSetDTO);
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+        Optional<WorkoutExercise> workoutExercise=startedWorkout.getWorkoutExercises().stream()
+                .filter(we->we.getId().equals(workoutExerciseId)).findFirst();
+        if(workoutExercise.isEmpty()){
+            throw new RuntimeException("Workout exercise not found!");
+        }
+        workoutExercise.get().getSets().add(newSet);
+        workoutExerciseRepository.save(workoutExercise.get());
+        startedWorkoutRepository.save(startedWorkout);
+        return new AddSetDTO(newSet.getId());
+    }
+
+    public String changeExercise(Long startedWorkoutId,Long workoutExerciseId,Long newExerciseId) {
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+        Optional<WorkoutExercise> workoutExercise=startedWorkout.getWorkoutExercises().stream()
+                .filter(we->we.getId().equals(workoutExerciseId)).findFirst();
+        if(workoutExercise.isEmpty()){
+            throw new RuntimeException("Workout exercise not found!");
+        }
+        Exercise exercise=exerciseRepository.findById(newExerciseId).orElseThrow();
+        workoutExercise.get().setExercise(exercise);
+        workoutExerciseRepository.save(workoutExercise.get());
+        startedWorkoutRepository.save(startedWorkout);
+        return "Successfully changed exercise!";
+    }
+
+    public String changeExerciseOrder(Long startedWorkoutId, ChangeExerciseOrderDTO changeExerciseOrderDTO) {
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+
+        // Create a map to store the new order for each exercise
+        Map<Long, Integer> newOrderMap = new HashMap<>();
+        List<Long> exerciseIds = changeExerciseOrderDTO.getWorkoutExerciseIds();
+
+        // Populate the order map (position in list = new order)
+        for (int i = 0; i < exerciseIds.size(); i++) {
+            newOrderMap.put(exerciseIds.get(i), i);
+        }
+
+        // Validate all exercises in the DTO exist in the workout
+        java.util.Set<Long> workoutExerciseIdSet = startedWorkout.getWorkoutExercises().stream()
+                .map(WorkoutExercise::getId)
+                .collect(Collectors.toSet());
+
+        if (!workoutExerciseIdSet.containsAll(exerciseIds) || workoutExerciseIdSet.size() != exerciseIds.size()) {
+            throw new IllegalArgumentException("Invalid exercise IDs provided");
+        }
+
+        // Update the sort order for each exercise
+        for (WorkoutExercise exercise : startedWorkout.getWorkoutExercises()) {
+            exercise.setPosition(newOrderMap.get(exercise.getId()));
+        }
+
+        // Save the workout with updated sort orders
+        startedWorkoutRepository.save(startedWorkout);
+
+        return "Exercise order updated successfully";
+    }
+
+    /**
+     * Maps a StartedWorkout to NextWorkoutDetailsDTO
+     * For mapping already started workouts
+     */
+    private NextWorkoutDetailsDTO mapStartedWorkoutToNextWorkoutDetailsDTO(StartedWorkout startedWorkout) {
+        List<WorkoutExerciseDetailsDTO> sortedExercises = startedWorkout.getWorkoutExercises().stream()
+                .sorted(Comparator.comparing(WorkoutExercise::getPosition))
+                .map(programService::mapWorkoutExerciseToDetailsDTO)
+                .collect(Collectors.toList());
+
+        return NextWorkoutDetailsDTO.builder()
+                .id(startedWorkout.getId())
+                .workoutId(startedWorkout.getWorkoutId())
+                .title(startedWorkout.getTitle())
+                .description(startedWorkout.getDescription())
+                .number(startedWorkout.getNumber())
+                .workoutExercises(sortedExercises)
+                .doneSets(mapDoneSetsToNextWorkoutDoneSetDTOs(startedWorkout.getDoneSets()))
+                .startDate(startedWorkout.getStartDate())
+                .doneDate(startedWorkout.getDoneDate())
+                .finished(startedWorkout.isFinished())
                 .build();
     }
 
-    // Renamed: mapWorkoutToDTO -> mapWorkoutToNextWorkoutDefinitionDTO
-    // Returns: NextWorkoutDefinitionDTO
-    private NextWorkoutDefinitionDTO mapWorkoutToNextWorkoutDefinitionDTO(Workout entity) {
-        if (entity == null) return null;
-        return NextWorkoutDefinitionDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .title(entity.getTitle())
-                .description(entity.getDescription())
-                .number(entity.getNumber())
-                .workoutExercises(mapWorkoutExerciseListToNextWorkoutExerciseDefinitionDTOList(entity.getWorkoutExercises())) // Call renamed list mapper
-                .build();
-    }
+    /**
+     * Maps a list of DoneSets to NextWorkoutDoneSetDTOs
+     */
+    private List<NextWorkoutDoneSetDTO> mapDoneSetsToNextWorkoutDoneSetDTOs(List<DoneSet> doneSets) {
+        if (doneSets == null) {
+            return new ArrayList<>();
+        }
 
-    // Renamed list mapper
-    private List<NextWorkoutDoneSetDTO> mapDoneSetListToNextWorkoutDoneSetDTOList(List<DoneSet> list) {
-        if (list == null) return Collections.emptyList();
-        return list.stream()
-                .map(this::mapDoneSetToNextWorkoutDoneSetDTO) // Call renamed item mapper
-                .filter(Objects::nonNull)
+        return doneSets.stream()
+                .map(this::mapDoneSetToNextWorkoutDoneSetDTO)
                 .collect(Collectors.toList());
     }
 
-    // Renamed list mapper
-    private List<NextWorkoutExerciseDefinitionDTO> mapWorkoutExerciseListToNextWorkoutExerciseDefinitionDTOList(List<WorkoutExercise> list) {
-        if (list == null) return Collections.emptyList();
-        return list.stream()
-                .map(this::mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO) // Call renamed item mapper
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
-
-    // Renamed: mapDoneSetToDTO -> mapDoneSetToNextWorkoutDoneSetDTO
-    // Returns: NextWorkoutDoneSetDTO
-    private NextWorkoutDoneSetDTO mapDoneSetToNextWorkoutDoneSetDTO(DoneSet entity) {
-        if (entity == null) return null;
-        return NextWorkoutDoneSetDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .set(mapSetToNextWorkoutSetDefinitionDTO(entity.getSet())) // Call renamed mapper
-                .workoutExercise(mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO(entity.getWorkoutExercise())) // Call renamed mapper
-                .volume(entity.getVolume())
-                .intensity(entity.getIntensity())
-                .date(entity.getDate())
-                .weightLifted(entity.getWeightLifted())
+    /**
+     * Maps a DoneSet to NextWorkoutDoneSetDTO
+     */
+    private NextWorkoutDoneSetDTO mapDoneSetToNextWorkoutDoneSetDTO(DoneSet doneSet) {
+        return NextWorkoutDoneSetDTO.builder()
+                .id(doneSet.getId())
+                .set(mapSetToNextWorkoutSetDefinitionDTO(doneSet.getSet()))
+                .workoutExercise(mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO(doneSet.getWorkoutExercise()))
+                .volume(doneSet.getVolume())
+                .intensity(doneSet.getIntensity())
+                .date(doneSet.getDate())
+                .weightLifted(doneSet.getWeightLifted())
                 .build();
     }
 
-    // Renamed: mapWorkoutExerciseToDTO -> mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO
-    // Returns: NextWorkoutExerciseDefinitionDTO
-    private NextWorkoutExerciseDefinitionDTO mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO(WorkoutExercise entity) {
-        if (entity == null) return null;
-        return NextWorkoutExerciseDefinitionDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .exercise(mapExerciseToNextWorkoutExerciseBaseDTO(entity.getExercise())) // Call renamed mapper
-                .sets(mapSetListToNextWorkoutSetDefinitionDTOList(entity.getSets())) // Call renamed list mapper
-                .minimumRestTime(entity.getMinimumRestTime())
-                .maximumRestTime(entity.getMaximumRestTime())
+    /**
+     * Maps a Set to NextWorkoutSetDefinitionDTO
+     */
+    private NextWorkoutSetDefinitionDTO mapSetToNextWorkoutSetDefinitionDTO(Set set) {
+        if (set == null) {
+            return null;
+        }
+
+        return NextWorkoutSetDefinitionDTO.builder()
+                .id(set.getId())
+                .volume(mapSetVolumeToNextWorkoutSetVolumeDetailsDTO(set.getVolume()))
+                .intensity(mapSetIntensityToNextWorkoutSetIntensityDetailsDTO(set.getIntensity()))
+                .volumeMetric(mapVolumeMetricToNextWorkoutVolumeMetricInfoDTO(set.getVolumeMetric()))
+                .intensityMetric(mapIntensityMetricToNextWorkoutIntensityMetricInfoDTO(set.getIntensityMetric()))
                 .build();
     }
 
-    // Renamed: mapExerciseToDTO -> mapExerciseToNextWorkoutExerciseBaseDTO
-    // Returns: NextWorkoutExerciseBaseDTO
-    private NextWorkoutExerciseBaseDTO mapExerciseToNextWorkoutExerciseBaseDTO(Exercise entity) {
-        if (entity == null) return null;
-        return NextWorkoutExerciseBaseDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .title(entity.getTitle())
-                .description(entity.getDescription())
-                .exerciseMuscles(mapExerciseMuscleListToNextWorkoutExerciseMuscleLinkDTOList(entity.getExerciseMuscles())) // Call renamed list mapper
+    /**
+     * Maps a WorkoutExercise to NextWorkoutExerciseDefinitionDTO
+     * Note: This is a simplified version - in practice you'd use programService.mapWorkoutExercisesToDetailsDTOs
+     */
+    private NextWorkoutExerciseDefinitionDTO mapWorkoutExerciseToNextWorkoutExerciseDefinitionDTO(WorkoutExercise workoutExercise) {
+        if (workoutExercise == null) {
+            return null;
+        }
+
+        return NextWorkoutExerciseDefinitionDTO.builder()
+                .id(workoutExercise.getId())
+                .exercise(mapExerciseToNextWorkoutExerciseBaseDTO(workoutExercise.getExercise()))
+                .sets(workoutExercise.getSets().stream()
+                        .map(this::mapSetToNextWorkoutSetDefinitionDTO)
+                        .collect(Collectors.toList()))
+                .minimumRestTime(workoutExercise.getMinimumRestTime())
+                .maximumRestTime(workoutExercise.getMaximumRestTime())
                 .build();
     }
 
-    // Renamed list mapper
-    private List<NextWorkoutSetDefinitionDTO> mapSetListToNextWorkoutSetDefinitionDTOList(List<Set> list) {
-        if (list == null) return Collections.emptyList();
-        return list.stream()
-                .map(this::mapSetToNextWorkoutSetDefinitionDTO) // Call renamed item mapper
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
+    /**
+     * Maps an Exercise to NextWorkoutExerciseBaseDTO
+     */
+    private NextWorkoutExerciseBaseDTO mapExerciseToNextWorkoutExerciseBaseDTO(Exercise exercise) {
+        if (exercise == null) {
+            return null;
+        }
 
-    // Renamed list mapper
-    private List<NextWorkoutExerciseMuscleLinkDTO> mapExerciseMuscleListToNextWorkoutExerciseMuscleLinkDTOList(List<ExerciseMuscle> list) {
-        if (list == null) return Collections.emptyList();
-        return list.stream()
-                .map(this::mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO) // Call renamed item mapper
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
-
-    // Renamed: mapExerciseMuscleToDTO -> mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO
-    // Returns: NextWorkoutExerciseMuscleLinkDTO
-    private NextWorkoutExerciseMuscleLinkDTO mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO(ExerciseMuscle entity) {
-        if (entity == null) return null;
-        return NextWorkoutExerciseMuscleLinkDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .muscle(mapMuscleToNextWorkoutMuscleInfoDTO(entity.getMuscle())) // Call renamed mapper
-                .intensity(entity.getIntensity())
+        return NextWorkoutExerciseBaseDTO.builder()
+                .id(exercise.getId())
+                .title(exercise.getTitle())
+                .description(exercise.getDescription())
+                .exerciseMuscles(exercise.getExerciseMuscles().stream()
+                        .map(this::mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO)
+                        .collect(Collectors.toList()))
                 .build();
     }
 
-    // Renamed: mapMuscleToDTO -> mapMuscleToNextWorkoutMuscleInfoDTO
-    // Returns: NextWorkoutMuscleInfoDTO
-    private NextWorkoutMuscleInfoDTO mapMuscleToNextWorkoutMuscleInfoDTO(Muscle entity) {
-        if (entity == null) return null;
-        return NextWorkoutMuscleInfoDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .name(entity.getName())
+    /**
+     * Maps an ExerciseMuscle to NextWorkoutExerciseMuscleLinkDTO
+     */
+    private NextWorkoutExerciseMuscleLinkDTO mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO(ExerciseMuscle exerciseMuscle) {
+        if (exerciseMuscle == null) {
+            return null;
+        }
+
+        return NextWorkoutExerciseMuscleLinkDTO.builder()
+                .id(exerciseMuscle.getId())
+                .muscle(mapMuscleToNextWorkoutMuscleInfoDTO(exerciseMuscle.getMuscle()))
+                .intensity(exerciseMuscle.getIntensity())
                 .build();
     }
 
-    // Renamed: mapSetToDTO -> mapSetToNextWorkoutSetDefinitionDTO
-    // Returns: NextWorkoutSetDefinitionDTO
-    private NextWorkoutSetDefinitionDTO mapSetToNextWorkoutSetDefinitionDTO(Set entity) {
-        if (entity == null) return null;
-        return NextWorkoutSetDefinitionDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .volume(mapSetVolumeToNextWorkoutSetVolumeDetailsDTO(entity.getVolume())) // Call renamed mapper
-                .intensity(mapSetIntensityToNextWorkoutSetIntensityDetailsDTO(entity.getIntensity())) // Call renamed mapper
-                .volumeMetric(mapVolumeMetricToNextWorkoutVolumeMetricInfoDTO(entity.getVolumeMetric())) // Call renamed mapper
-                .intensityMetric(mapIntensityMetricToNextWorkoutIntensityMetricInfoDTO(entity.getIntensityMetric())) // Call renamed mapper
+    /**
+     * Maps a Muscle to NextWorkoutMuscleInfoDTO
+     */
+    private NextWorkoutMuscleInfoDTO mapMuscleToNextWorkoutMuscleInfoDTO(Muscle muscle) {
+        if (muscle == null) {
+            return null;
+        }
+
+        return NextWorkoutMuscleInfoDTO.builder()
+                .id(muscle.getId())
+                .name(muscle.getName())
                 .build();
     }
 
-    // Renamed: mapSetVolumeToDTO -> mapSetVolumeToNextWorkoutSetVolumeDetailsDTO
-    // Returns: NextWorkoutSetVolumeDetailsDTO
-    private NextWorkoutSetVolumeDetailsDTO mapSetVolumeToNextWorkoutSetVolumeDetailsDTO(SetVolume embeddable) {
-        if (embeddable == null) return null;
-        // Use new DTO name for constructor/return type
-        return new NextWorkoutSetVolumeDetailsDTO(embeddable.getMinimumVolume(), embeddable.getMaximumVolume());
+    /**
+     * Maps a SetVolume to NextWorkoutSetVolumeDetailsDTO
+     */
+    private NextWorkoutSetVolumeDetailsDTO mapSetVolumeToNextWorkoutSetVolumeDetailsDTO(SetVolume volume) {
+        if (volume == null) {
+            return null;
+        }
+
+        return new NextWorkoutSetVolumeDetailsDTO(
+                volume.getMinimumVolume(),
+                volume.getMaximumVolume()
+        );
     }
 
-    // Renamed: mapSetIntensityToDTO -> mapSetIntensityToNextWorkoutSetIntensityDetailsDTO
-    // Returns: NextWorkoutSetIntensityDetailsDTO
-    private NextWorkoutSetIntensityDetailsDTO mapSetIntensityToNextWorkoutSetIntensityDetailsDTO(SetIntensity embeddable) {
-        if (embeddable == null) return null;
-        // Use new DTO name for constructor/return type
-        return new NextWorkoutSetIntensityDetailsDTO(embeddable.getMinimumIntensity(), embeddable.getMaximumIntensity());
+    /**
+     * Maps a SetIntensity to NextWorkoutSetIntensityDetailsDTO
+     */
+    private NextWorkoutSetIntensityDetailsDTO mapSetIntensityToNextWorkoutSetIntensityDetailsDTO(SetIntensity intensity) {
+        if (intensity == null) {
+            return null;
+        }
+
+        return new NextWorkoutSetIntensityDetailsDTO(
+                intensity.getMinimumIntensity(),
+                intensity.getMaximumIntensity()
+        );
     }
 
-    // Renamed: mapVolumeMetricToDTO -> mapVolumeMetricToNextWorkoutVolumeMetricInfoDTO
-    // Returns: NextWorkoutVolumeMetricInfoDTO
-    private NextWorkoutVolumeMetricInfoDTO mapVolumeMetricToNextWorkoutVolumeMetricInfoDTO(VolumeMetric entity) {
-        if (entity == null) return null;
-        return NextWorkoutVolumeMetricInfoDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .isRange(entity.isRange())
-                .title(entity.getTitle())
-                .metricSymbol(entity.getMetricSymbol())
+    /**
+     * Maps a VolumeMetric to NextWorkoutVolumeMetricInfoDTO
+     */
+    private NextWorkoutVolumeMetricInfoDTO mapVolumeMetricToNextWorkoutVolumeMetricInfoDTO(VolumeMetric volumeMetric) {
+        if (volumeMetric == null) {
+            return null;
+        }
+
+        return NextWorkoutVolumeMetricInfoDTO.builder()
+                .id(volumeMetric.getId())
+                .isRange(volumeMetric.isRange())
+                .title(volumeMetric.getTitle())
+                .metricSymbol(volumeMetric.getMetricSymbol())
                 .build();
     }
 
-    // Renamed: mapIntensityMetricToDTO -> mapIntensityMetricToNextWorkoutIntensityMetricInfoDTO
-    // Returns: NextWorkoutIntensityMetricInfoDTO
-    private NextWorkoutIntensityMetricInfoDTO mapIntensityMetricToNextWorkoutIntensityMetricInfoDTO(IntensityMetric entity) {
-        if (entity == null) return null;
-        return NextWorkoutIntensityMetricInfoDTO.builder() // Use new DTO name
-                .id(entity.getId())
-                .minimumIntensity(entity.getMinimumIntensity())
-                .maximumIntensity(entity.getMaximumIntensity())
-                .isRange(entity.isRange())
-                .title(entity.getTitle())
-                .metricSymbol(entity.getMetricSymbol())
+    /**
+     * Maps an IntensityMetric to NextWorkoutIntensityMetricInfoDTO
+     */
+    private NextWorkoutIntensityMetricInfoDTO mapIntensityMetricToNextWorkoutIntensityMetricInfoDTO(IntensityMetric intensityMetric) {
+        if (intensityMetric == null) {
+            return null;
+        }
+
+        return NextWorkoutIntensityMetricInfoDTO.builder()
+                .id(intensityMetric.getId())
+                .minimumIntensity(intensityMetric.getMinimumIntensity())
+                .maximumIntensity(intensityMetric.getMaximumIntensity())
+                .isRange(intensityMetric.isRange())
+                .title(intensityMetric.getTitle())
+                .metricSymbol(intensityMetric.getMetricSymbol())
                 .build();
     }
 }
