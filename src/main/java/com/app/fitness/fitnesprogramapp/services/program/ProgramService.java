@@ -1,13 +1,7 @@
 package com.app.fitness.fitnesprogramapp.services.program;
 
 import com.app.fitness.fitnesprogramapp.dtos.program.*;
-import com.app.fitness.fitnesprogramapp.dtos.program.currentworkout.CurrentWorkoutDTO;
-import com.app.fitness.fitnesprogramapp.dtos.program.currentworkout.CurrentWorkoutExerciseDTO;
-import com.app.fitness.fitnesprogramapp.dtos.program.currentworkout.CurrentSetDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.details.*;
-import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateDoneSetDTO;
-import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHistoryDTO;
-import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateExerciseHistoryResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.startprogram.StartProgramResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.update.*;
 import com.app.fitness.fitnesprogramapp.dtos.user.UserProgramDetailsDTO;
@@ -23,7 +17,6 @@ import com.app.fitness.fitnesprogramapp.repositories.exercise.WorkoutExerciseRep
 import com.app.fitness.fitnesprogramapp.repositories.metrics.IntensityMetricRepository;
 import com.app.fitness.fitnesprogramapp.repositories.metrics.VolumeMetricRepository;
 import com.app.fitness.fitnesprogramapp.repositories.program.*;
-import com.app.fitness.fitnesprogramapp.repositories.set.DoneSetRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.SetRepository;
 import com.app.fitness.fitnesprogramapp.repositories.user.UserRepository;
 import com.app.fitness.fitnesprogramapp.repositories.week.WeekRepository;
@@ -291,16 +284,18 @@ public class ProgramService {
         workout.setNumber(workoutDTO.getNumber());
 
         List<WorkoutExercise> workoutExercises = new ArrayList<>();
+        int i=0;
         for (WorkoutExerciseDTO exerciseDTO : workoutDTO.getWorkoutExercises()) {
-            WorkoutExercise workoutExercise = createWorkoutExercise(exerciseDTO);
+            WorkoutExercise workoutExercise = createWorkoutExercise(exerciseDTO,i);
             workoutExercises.add(workoutExercise);
+            i+=1;
         }
 
         workout.setWorkoutExercises(workoutExercises);
         return workoutRepository.save(workout);
     }
 
-    private WorkoutExercise createWorkoutExercise(WorkoutExerciseDTO exerciseDTO) {
+    private WorkoutExercise createWorkoutExercise(WorkoutExerciseDTO exerciseDTO,int position) {
         WorkoutExercise workoutExercise = new WorkoutExercise();
 
         // Get exercise by ID
@@ -310,10 +305,11 @@ public class ProgramService {
         workoutExercise.setExercise(exercise);
         workoutExercise.setMinimumRestTime(exerciseDTO.getMinimumRestTime());
         workoutExercise.setMaximumRestTime(exerciseDTO.getMaximumRestTime());
+        workoutExercise.setPosition(position);
 
         // Create sets
         List<Set> sets = new ArrayList<>();
-        for (WorkoutExerciseSetDTO setDTO : exerciseDTO.getSets()) {
+        for (CreateSetDTO setDTO : exerciseDTO.getSets()) {
             Set set = createWorkoutExerciseSet(
                     setDTO
             );
@@ -324,8 +320,8 @@ public class ProgramService {
         return workoutExerciseRepository.save(workoutExercise);
     }
 
-    private Set createWorkoutExerciseSet(
-            WorkoutExerciseSetDTO setDTO) {
+    public Set createWorkoutExerciseSet(
+            CreateSetDTO setDTO) {
 
         Set set = new Set();
 
@@ -513,15 +509,16 @@ public class ProgramService {
 
         // Create new workout exercises
         List<WorkoutExercise> newExercises = new ArrayList<>();
+        int i=0;
         for (UpdateWorkoutExerciseDTO exerciseDTO : exerciseDTOs) {
-            WorkoutExercise workoutExercise = createNewWorkoutExercise(exerciseDTO);
+            WorkoutExercise workoutExercise = createNewWorkoutExercise(exerciseDTO,i);
             newExercises.add(workoutExercise);
         }
 
         workout.setWorkoutExercises(newExercises);
     }
 
-    private WorkoutExercise createNewWorkoutExercise(UpdateWorkoutExerciseDTO exerciseDTO) {
+    private WorkoutExercise createNewWorkoutExercise(UpdateWorkoutExerciseDTO exerciseDTO,int position) {
         WorkoutExercise workoutExercise = new WorkoutExercise();
 
         // Get referenced exercise
@@ -531,6 +528,7 @@ public class ProgramService {
         workoutExercise.setExercise(exercise);
         workoutExercise.setMinimumRestTime(exerciseDTO.getMinimumRestTime());
         workoutExercise.setMaximumRestTime(exerciseDTO.getMaximumRestTime());
+        workoutExercise.setPosition(position);
 
         // Create new sets
         List<Set> sets = new ArrayList<>();

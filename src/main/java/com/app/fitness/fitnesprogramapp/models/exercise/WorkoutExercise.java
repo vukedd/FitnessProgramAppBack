@@ -13,6 +13,7 @@ public class WorkoutExercise {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Integer position;
 
     @ManyToOne
     @JoinColumn(name = "exercise_id", referencedColumnName = "id")

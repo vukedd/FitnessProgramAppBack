@@ -1,6 +1,10 @@
 package com.app.fitness.fitnesprogramapp.services.workout;
 
+import com.app.fitness.fitnesprogramapp.dtos.exercise.ChangeExerciseOrderDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.CreateSetDTO;
+import com.app.fitness.fitnesprogramapp.dtos.program.details.WorkoutExerciseDetailsDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.history.CreateDoneSetDTO;
+import com.app.fitness.fitnesprogramapp.dtos.set.AddSetDTO;
 import com.app.fitness.fitnesprogramapp.dtos.set.CompleteSetResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.workout.*;
 import com.app.fitness.fitnesprogramapp.models.exercise.Exercise;
@@ -11,14 +15,17 @@ import com.app.fitness.fitnesprogramapp.models.program.Program;
 import com.app.fitness.fitnesprogramapp.models.program.StartedProgram;
 import com.app.fitness.fitnesprogramapp.models.set.*;
 import com.app.fitness.fitnesprogramapp.models.set.Set;
+import com.app.fitness.fitnesprogramapp.models.user.User;
 import com.app.fitness.fitnesprogramapp.models.week.StartedWeek;
 import com.app.fitness.fitnesprogramapp.models.week.Week;
 import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
 import com.app.fitness.fitnesprogramapp.models.workout.Workout;
+import com.app.fitness.fitnesprogramapp.repositories.exercise.ExerciseRepository;
 import com.app.fitness.fitnesprogramapp.repositories.exercise.WorkoutExerciseRepository;
 import com.app.fitness.fitnesprogramapp.repositories.program.StartedProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.DoneSetRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.SetRepository;
+import com.app.fitness.fitnesprogramapp.repositories.user.UserRepository;
 import com.app.fitness.fitnesprogramapp.repositories.week.StartedWeekRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.StartedWorkoutRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
@@ -42,14 +49,19 @@ public class WorkoutService {
     private final SetRepository setRepository;
     private final WorkoutRepository workoutRepository;
     private final ProgramService programService; // For workout exercise mapping
+    private final UserRepository userRepository;
+    private final ExerciseRepository exerciseRepository;
 
     /**
      * Processes the next workout request for a given program ID
      * @param programId The started program ID
      * @return NextWorkoutDTO with details, or null if program not found
      */
-    public NextWorkoutDTO processNextWorkout(Long programId) {
-        Optional<StartedProgram> startedProgramOpt = startedProgramRepository.findById(programId);
+    public NextWorkoutDTO processNextWorkout(Long programId,String username) {
+        User user=userRepository.findByUsername(username).orElseThrow();
+        Optional<StartedProgram> startedProgramOpt = user.getStartedPrograms().stream().filter(
+                sp->sp.getId().equals(programId)
+        ).findFirst();
 
         if (startedProgramOpt.isEmpty()) {
             return null;
@@ -105,6 +117,7 @@ public class WorkoutService {
             exercise.setExercise(workoutExercise.getExercise());
             exercise.setMaximumRestTime(workoutExercise.getMaximumRestTime());
             exercise.setMinimumRestTime(workoutExercise.getMinimumRestTime());
+            exercise.setPosition(workoutExercise.getPosition());
             exercise.setSets(new ArrayList<>());
             for(Set set: workoutExercise.getSets()) {
                 Set s = new Set();
@@ -178,26 +191,26 @@ public class WorkoutService {
                 .filter(w -> w.getId().equals(startedWeek.getWeekId()))
                 .findFirst();
 
-        if(optionalWeek.isEmpty()){
-            startedWeek.setFinished(true);
-            startedWeek.setDoneDate(new Date());
-            startedWeekRepository.save(startedWeek);
-            return startNextWeek(startedProgram);
+        List<Workout> originalWeekWorkouts;
+        if (optionalWeek.isPresent()) {
+            originalWeekWorkouts=optionalWeek.get().getWorkouts();
         }
-        Week originalWeek=optionalWeek.get();
+        else{
+            originalWeekWorkouts=new ArrayList<>();
+        }
 
         List<StartedWorkout> startedWorkouts = startedWeek.getStartedWorkouts();
 
         if (startedWorkouts.isEmpty()) {
-            // No workouts started in this week, start the first workout
-            if (originalWeek.getWorkouts().isEmpty()) {
+            // No workouts started in this week, start the first workout in this week
+            if (originalWeekWorkouts.isEmpty()) {
                 return NextWorkoutDTO.builder()
                         .message("No workouts defined for this week")
                         .build();
             }
 
             // Start the first workout of the week
-            Workout nextWorkout = originalWeek.getWorkouts().getFirst();
+            Workout nextWorkout = originalWeekWorkouts.getFirst();
 
             return NextWorkoutDTO.builder()
                     .nextWorkoutDetails(createNextWorkoutDetailsDTO(nextWorkout))
@@ -225,7 +238,7 @@ public class WorkoutService {
                 .collect(Collectors.toSet());
 
         // Find the first workout in the original week that hasn't been started yet
-        Optional<Workout> nextWorkout = originalWeek.getWorkouts().stream()
+        Optional<Workout> nextWorkout = originalWeekWorkouts.stream()
                 .filter(workout -> !startedWorkoutIds.contains(workout.getId()))
                 .findFirst();
 
@@ -428,10 +441,16 @@ public class WorkoutService {
      */
     private void checkWeekCompletion(StartedWeek startedWeek, Program program) {
         // Get the original week from program using weekId
-        Week originalWeek = program.getWeeks().stream()
+        Optional<Week> optionalWeek = program.getWeeks().stream()
                 .filter(w -> w.getId().equals(startedWeek.getWeekId()))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Week not found in program"));
+                .findFirst();
+        List<Workout> originalWeekWorkouts;
+        if (optionalWeek.isPresent()) {
+            originalWeekWorkouts=optionalWeek.get().getWorkouts();
+        }
+        else{
+            originalWeekWorkouts=new ArrayList<>();
+        }
 
         List<StartedWorkout> startedWorkouts = startedWeek.getStartedWorkouts();
 
@@ -442,7 +461,7 @@ public class WorkoutService {
                 .collect(Collectors.toSet());
 
         // Check if all workouts in the original week have been started and finished
-        boolean allWorkoutsFinished = originalWeek.getWorkouts().stream()
+        boolean allWorkoutsFinished = originalWeekWorkouts.stream()
                 .allMatch(workout -> finishedWorkoutIds.contains(workout.getId()));
 
         if (allWorkoutsFinished) {
@@ -494,19 +513,83 @@ public class WorkoutService {
         return new CompleteSetResponseDTO(doneSetId, "Successfully removed completed set from workout!");
     }
 
+    public AddSetDTO addSet(Long startedWorkoutId,Long workoutExerciseId, CreateSetDTO createSetDTO) {
+        Set newSet=programService.createWorkoutExerciseSet(createSetDTO);
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+        Optional<WorkoutExercise> workoutExercise=startedWorkout.getWorkoutExercises().stream()
+                .filter(we->we.getId().equals(workoutExerciseId)).findFirst();
+        if(workoutExercise.isEmpty()){
+            throw new RuntimeException("Workout exercise not found!");
+        }
+        workoutExercise.get().getSets().add(newSet);
+        workoutExerciseRepository.save(workoutExercise.get());
+        startedWorkoutRepository.save(startedWorkout);
+        return new AddSetDTO(newSet.getId());
+    }
+
+    public String changeExercise(Long startedWorkoutId,Long workoutExerciseId,Long newExerciseId) {
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+        Optional<WorkoutExercise> workoutExercise=startedWorkout.getWorkoutExercises().stream()
+                .filter(we->we.getId().equals(workoutExerciseId)).findFirst();
+        if(workoutExercise.isEmpty()){
+            throw new RuntimeException("Workout exercise not found!");
+        }
+        Exercise exercise=exerciseRepository.findById(newExerciseId).orElseThrow();
+        workoutExercise.get().setExercise(exercise);
+        workoutExerciseRepository.save(workoutExercise.get());
+        startedWorkoutRepository.save(startedWorkout);
+        return "Successfully changed exercise!";
+    }
+
+    public String changeExerciseOrder(Long startedWorkoutId, ChangeExerciseOrderDTO changeExerciseOrderDTO) {
+        StartedWorkout startedWorkout = startedWorkoutRepository.findById(startedWorkoutId).orElseThrow();
+
+        // Create a map to store the new order for each exercise
+        Map<Long, Integer> newOrderMap = new HashMap<>();
+        List<Long> exerciseIds = changeExerciseOrderDTO.getWorkoutExerciseIds();
+
+        // Populate the order map (position in list = new order)
+        for (int i = 0; i < exerciseIds.size(); i++) {
+            newOrderMap.put(exerciseIds.get(i), i);
+        }
+
+        // Validate all exercises in the DTO exist in the workout
+        java.util.Set<Long> workoutExerciseIdSet = startedWorkout.getWorkoutExercises().stream()
+                .map(WorkoutExercise::getId)
+                .collect(Collectors.toSet());
+
+        if (!workoutExerciseIdSet.containsAll(exerciseIds) || workoutExerciseIdSet.size() != exerciseIds.size()) {
+            throw new IllegalArgumentException("Invalid exercise IDs provided");
+        }
+
+        // Update the sort order for each exercise
+        for (WorkoutExercise exercise : startedWorkout.getWorkoutExercises()) {
+            exercise.setPosition(newOrderMap.get(exercise.getId()));
+        }
+
+        // Save the workout with updated sort orders
+        startedWorkoutRepository.save(startedWorkout);
+
+        return "Exercise order updated successfully";
+    }
+
     /**
      * Maps a StartedWorkout to NextWorkoutDetailsDTO
      * For mapping already started workouts
      */
     private NextWorkoutDetailsDTO mapStartedWorkoutToNextWorkoutDetailsDTO(StartedWorkout startedWorkout) {
-        // Build NextWorkoutDetailsDTO using the builder pattern
+        List<WorkoutExerciseDetailsDTO> sortedExercises = startedWorkout.getWorkoutExercises().stream()
+                .sorted(Comparator.comparing(WorkoutExercise::getPosition))
+                .map(programService::mapWorkoutExerciseToDetailsDTO)
+                .collect(Collectors.toList());
+
         return NextWorkoutDetailsDTO.builder()
                 .id(startedWorkout.getId())
                 .workoutId(startedWorkout.getWorkoutId())
                 .title(startedWorkout.getTitle())
                 .description(startedWorkout.getDescription())
                 .number(startedWorkout.getNumber())
-                .workoutExercises(programService.mapWorkoutExercisesToDetailsDTOs(startedWorkout.getWorkoutExercises()))
+                .workoutExercises(sortedExercises)
                 .doneSets(mapDoneSetsToNextWorkoutDoneSetDTOs(startedWorkout.getDoneSets()))
                 .startDate(startedWorkout.getStartDate())
                 .doneDate(startedWorkout.getDoneDate())

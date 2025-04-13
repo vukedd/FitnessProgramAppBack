@@ -237,10 +237,10 @@ values  (10, 8, 0, 0, 1, 1, 1),
         (10, 12, 0, 0, 7, 1, 1);
 
 -- Create workout exercises
-insert into fitnessprogramapp.workout_exercise (maximum_rest_time, minimum_rest_time, exercise_id, id)
-values  (60, 0, 3, 1),
-        (60, 0, 2, 2),
-        (60, 0, 1, 3);
+insert into fitnessprogramapp.workout_exercise (maximum_rest_time, minimum_rest_time, exercise_id, id,position)
+values  (60, 0, 3, 1,0),
+        (60, 0, 2, 2,1),
+        (60, 0, 1, 3,2);
 
 -- Link workouts to workout_exercises
 insert into fitnessprogramapp.workout_workout_exercises (workout_exercise_id, workout_id)
