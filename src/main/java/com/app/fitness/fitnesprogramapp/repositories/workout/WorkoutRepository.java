@@ -5,14 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
 import java.util.List;
 
 public interface WorkoutRepository extends JpaRepository<Workout, Long> {
 
     @Query(value = """
-    SELECT DATE(sw.done_date) as date,
-        ROUND(SUM(TIME_TO_SEC(TIMEDIFF(sw.done_time, sw.start_time)) / 3600), 2) as 'Hours'
+    SELECT DATE(sw.done_date) as 'Date',
+        ROUND(SUM(TIME_TO_SEC(TIMEDIFF(sw.done_date, sw.start_date)) / 3600), 2) as 'Hours'
     FROM started_workout sw
     JOIN started_week_started_workouts swsw ON swsw.started_workouts_id = sw.id
     JOIN started_week sw2 ON sw2.id = swsw.started_week_id
