@@ -33,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -173,6 +174,7 @@ public class ProgramService {
 
     public List<WorkoutDetailsDTO> mapWorkoutsToDetailsDTOs(List<Workout> workouts) {
         return workouts.stream()
+                .sorted(Comparator.comparing(Workout::getPosition))
                 .map(this::mapWorkoutToDetailsDTO)
                 .toList();
     }
@@ -268,27 +270,30 @@ public class ProgramService {
         Week week = new Week();
         List<Workout> workouts = new ArrayList<>();
 
+        int i=0;
         for (WorkoutDTO workoutDTO : weekDTO.getWorkouts()) {
-            Workout workout = createWorkout(workoutDTO);
+            Workout workout = createWorkout(workoutDTO,i);
             workouts.add(workout);
+            i++;
         }
 
         week.setWorkouts(workouts);
         return weekRepository.save(week);
     }
 
-    private Workout createWorkout(WorkoutDTO workoutDTO) {
+    private Workout createWorkout(WorkoutDTO workoutDTO,int position) {
         Workout workout = new Workout();
         workout.setTitle(workoutDTO.getTitle());
         workout.setDescription(workoutDTO.getDescription());
         workout.setNumber(workoutDTO.getNumber());
+        workout.setPosition(position);
 
         List<WorkoutExercise> workoutExercises = new ArrayList<>();
         int i=0;
         for (WorkoutExerciseDTO exerciseDTO : workoutDTO.getWorkoutExercises()) {
             WorkoutExercise workoutExercise = createWorkoutExercise(exerciseDTO,i);
             workoutExercises.add(workoutExercise);
-            i+=1;
+            i++;
         }
 
         workout.setWorkoutExercises(workoutExercises);
@@ -427,24 +432,22 @@ public class ProgramService {
                         .noneMatch(updatedWeek -> updatedWeek.getId().equals(week.getId())))
                 .toList();
 
-        for (Week week : weeksToRemove) {
-            weekRepository.delete(week);
-        }
+        weekRepository.deleteAll(weeksToRemove);
 
         program.setWeeks(updatedWeeks);
     }
 
     private Week findOrCreateWeek(List<Week> existingWeeks, UpdateWeekDTO weekDTO) {
         // If ID is provided and exists, update the existing week
-        if (weekDTO.getId() > 0) {
+        if (weekDTO.getId() != null) {
             for (Week existingWeek : existingWeeks) {
-                if (existingWeek.getId() == weekDTO.getId()) {
+                if (existingWeek.getId().equals(weekDTO.getId())) {
                     return existingWeek;
                 }
             }
         }
 
-        // If not found or ID is 0, create a new week
+        // If not found or ID is null, create a new week
         Week newWeek = new Week();
         newWeek.setWorkouts(new ArrayList<>());
         return weekRepository.save(newWeek);
@@ -455,6 +458,7 @@ public class ProgramService {
         List<Workout> updatedWorkouts = new ArrayList<>();
 
         // Process all workouts from the DTO
+        int i=0;
         for (UpdateWorkoutDTO workoutDTO : workoutDTOs) {
             // Try to find existing workout by ID
             Workout workout = findOrCreateWorkout(existingWorkouts, workoutDTO);
@@ -463,11 +467,13 @@ public class ProgramService {
             workout.setTitle(workoutDTO.getTitle());
             workout.setDescription(workoutDTO.getDescription());
             workout.setNumber(workoutDTO.getNumber());
+            workout.setPosition(i);
 
             // Replace all workout exercises with new ones
             replaceWorkoutExercises(workout, workoutDTO.getWorkoutExercises());
 
             updatedWorkouts.add(workoutRepository.save(workout));
+            i++;
         }
 
         // Remove workouts that are no longer present
@@ -476,18 +482,16 @@ public class ProgramService {
                         .noneMatch(updatedWorkout -> updatedWorkout.getId().equals(workout.getId())))
                 .toList();
 
-        for (Workout workout : workoutsToRemove) {
-            workoutRepository.delete(workout);
-        }
+        workoutRepository.deleteAll(workoutsToRemove);
 
         week.setWorkouts(updatedWorkouts);
     }
 
     private Workout findOrCreateWorkout(List<Workout> existingWorkouts, UpdateWorkoutDTO workoutDTO) {
         // If ID is provided and exists, update the existing workout
-        if (workoutDTO.getId() > 0) {
+        if (workoutDTO.getId() != null) {
             for (Workout existingWorkout : existingWorkouts) {
-                if (existingWorkout.getId() == workoutDTO.getId()) {
+                if (existingWorkout.getId().equals(workoutDTO.getId())) {
                     return existingWorkout;
                 }
             }

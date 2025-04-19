@@ -227,18 +227,18 @@ class WorkoutControllerTest {
     // Helper method to create a program update DTO
     private ProgramUpdateDTO createProgramUpdateDTO() {
         ProgramUpdateDTO updateDTO = new ProgramUpdateDTO();
-        updateDTO.setId((int) testProgram.getId().longValue());
+        updateDTO.setId(testProgram.getId());
         updateDTO.setName(testProgram.getTitle());
 
         List<UpdateWeekDTO> weekDTOs = new ArrayList<>();
         for (Week week : testProgram.getWeeks()) {
             UpdateWeekDTO weekDTO = new UpdateWeekDTO();
-            weekDTO.setId((int) week.getId().longValue());
+            weekDTO.setId(week.getId());
 
             List<UpdateWorkoutDTO> workoutDTOs = new ArrayList<>();
             for (Workout workout : week.getWorkouts()) {
                 UpdateWorkoutDTO workoutDTO = new UpdateWorkoutDTO();
-                workoutDTO.setId((int) workout.getId().longValue());
+                workoutDTO.setId(workout.getId());
                 workoutDTO.setTitle(workout.getTitle());
                 workoutDTO.setDescription(workout.getDescription());
                 workoutDTO.setNumber(workout.getNumber());
@@ -248,7 +248,7 @@ class WorkoutControllerTest {
                     List<UpdateWorkoutExerciseSetDTO> setDTOs = new ArrayList<>();
                     for (Set set : we.getSets()) {
                         UpdateWorkoutExerciseSetDTO setDTO = new UpdateWorkoutExerciseSetDTO();
-                        setDTO.setId((int) set.getId().longValue());
+                        setDTO.setId(set.getId());
                         setDTO.setVolumeMin(set.getVolume().getMinimumVolume());
                         setDTO.setVolumeMax(set.getVolume().getMaximumVolume());
                         setDTO.setVolumeMetric(set.getVolumeMetric().getId());
@@ -259,7 +259,7 @@ class WorkoutControllerTest {
                     }
 
                     UpdateWorkoutExerciseDTO exerciseDTO = new UpdateWorkoutExerciseDTO(
-                            (int) we.getId().longValue(),
+                            we.getId(),
                             we.getExercise().getId(),
                             we.getMinimumRestTime(),
                             we.getMaximumRestTime(),

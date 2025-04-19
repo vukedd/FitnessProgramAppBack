@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class UpdateWorkoutExerciseSetDTO {
-    private int id;
+    private Long id;
     private int volumeMin;
     private int volumeMax;
     private Long volumeMetric;

@@ -6,7 +6,7 @@ import java.util.List;
 
 @Data
 public class ProgramUpdateDTO {
-    private int id;
+    private Long id;
     private String name;
     private List<UpdateWeekDTO> weeks;
 }
