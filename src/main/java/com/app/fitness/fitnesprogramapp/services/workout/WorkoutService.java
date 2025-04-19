@@ -192,12 +192,7 @@ public class WorkoutService {
                 .findFirst();
 
         List<Workout> originalWeekWorkouts;
-        if (optionalWeek.isPresent()) {
-            originalWeekWorkouts=optionalWeek.get().getWorkouts();
-        }
-        else{
-            originalWeekWorkouts=new ArrayList<>();
-        }
+        originalWeekWorkouts = optionalWeek.map(week -> week.getWorkouts().stream().sorted(Comparator.comparing(Workout::getPosition)).toList()).orElseGet(ArrayList::new);
 
         List<StartedWorkout> startedWorkouts = startedWeek.getStartedWorkouts();
 
@@ -315,7 +310,7 @@ public class WorkoutService {
                     .build();
         }
 
-        Workout firstWorkout = firstWeek.getWorkouts().getFirst();
+        Workout firstWorkout = firstWeek.getWorkouts().stream().sorted(Comparator.comparing(Workout::getPosition)).toList().getFirst();
 
         return NextWorkoutDTO.builder()
                 .nextWorkoutDetails(createNextWorkoutDetailsDTO(firstWorkout))
@@ -362,7 +357,8 @@ public class WorkoutService {
                         .build();
             }
 
-            Workout firstWorkout = nextWeek.get().getWorkouts().getFirst();
+            Workout firstWorkout = nextWeek.get().getWorkouts().stream().sorted(Comparator.comparing(Workout::getPosition)).toList().getFirst();
+
 
             return NextWorkoutDTO.builder()
                     .nextWorkoutDetails(createNextWorkoutDetailsDTO(firstWorkout))
@@ -445,12 +441,7 @@ public class WorkoutService {
                 .filter(w -> w.getId().equals(startedWeek.getWeekId()))
                 .findFirst();
         List<Workout> originalWeekWorkouts;
-        if (optionalWeek.isPresent()) {
-            originalWeekWorkouts=optionalWeek.get().getWorkouts();
-        }
-        else{
-            originalWeekWorkouts=new ArrayList<>();
-        }
+        originalWeekWorkouts = optionalWeek.map(week -> week.getWorkouts().stream().sorted(Comparator.comparing(Workout::getPosition)).toList()).orElseGet(ArrayList::new);
 
         List<StartedWorkout> startedWorkouts = startedWeek.getStartedWorkouts();
 

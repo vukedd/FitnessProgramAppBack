@@ -17,6 +17,8 @@ public class Workout {
     private String description;
     private String number;
 
+    private Integer position;
+
     @OneToMany
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "workout_exercise_id")

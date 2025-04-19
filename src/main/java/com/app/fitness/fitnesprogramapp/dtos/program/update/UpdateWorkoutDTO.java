@@ -6,7 +6,7 @@ import java.util.List;
 
 @Data
 public class UpdateWorkoutDTO {
-    private int id;
+    private Long id;
     private String title;
     private String description;
     private String number;

@@ -10,7 +10,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 public class UpdateWorkoutExerciseDTO {
-    private int id;
+    private Long id;
     private Long exercise; // Exercise ID
     private int minimumRestTime;
     private int maximumRestTime;
