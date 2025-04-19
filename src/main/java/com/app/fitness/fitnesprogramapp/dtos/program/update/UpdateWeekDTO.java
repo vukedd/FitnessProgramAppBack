@@ -6,6 +6,6 @@ import java.util.List;
 
 @Data
 public class UpdateWeekDTO {
-    private int id;
+    private Long id;
     private List<UpdateWorkoutDTO> workouts;
 }

@@ -217,9 +217,9 @@ insert into fitnessprogramapp.program_weeks (program_id, week_id)
 values (17, 1);
 
 -- Create workouts
-insert into fitnessprogramapp.workout (id, description, number, title)
-values  (1, 'asdas', '1', 'neki workout 1'),
-        (2, 'asdas', '2', 'workout 2');
+insert into fitnessprogramapp.workout (id, description, number, title,position)
+values  (1, 'asdas', '1', 'neki workout 1',0),
+        (2, 'asdas', '2', 'workout 2',1);
 
 -- Link week to workouts
 insert into fitnessprogramapp.week_workouts (week_id, workout_id)
