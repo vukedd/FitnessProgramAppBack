@@ -14,5 +14,6 @@ public class StartedWorkoutHistoryDTO {
     private String title;
     private String description;
     private String number;
+    private boolean finished;
     private List<WorkoutExerciseHistoryDTO> workoutExercises;
 }
