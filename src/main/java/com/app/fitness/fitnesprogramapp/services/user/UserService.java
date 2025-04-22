@@ -20,7 +20,7 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(GONE,
                         "The user account has been deleted or deactivated"));
 
-        return new UserProfileDto(user.getUsername(), user.getEmail());
+        return new UserProfileDto(user.getUsername(), user.getEmail(), user.getFirstName(), user.getLastName());
     }
 
     public UserProfileDto getUserByRefreshTokenId(final Long refreshTokenId) {
@@ -28,6 +28,6 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(GONE,
                         "The user account has been deleted or deactivated"));
 
-        return new UserProfileDto(user.getUsername(), user.getEmail());
+        return new UserProfileDto(user.getUsername(), user.getEmail(), user.getFirstName(), user.getLastName());
     }
 }
