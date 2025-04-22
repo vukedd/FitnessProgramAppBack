@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 public class WorkoutExerciseHistoryDTO {
     private Long id;
+    private String title;
     private List<SetDetailsDTO> sets;
     private List<DoneSetsHistoryDTO> doneSets;
 
