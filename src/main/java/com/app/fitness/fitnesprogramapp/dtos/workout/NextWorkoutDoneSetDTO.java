@@ -15,7 +15,7 @@ public class NextWorkoutDoneSetDTO { // Renamed
     private NextWorkoutSetDefinitionDTO set; // Renamed type
     private NextWorkoutExerciseDefinitionDTO workoutExercise; // Renamed type
     private int volume;
-    private int intensity;
+    private double intensity;
     private Date date;
     private Double weightLifted;
 }

@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class NextWorkoutSetIntensityDetailsDTO { // Renamed
-    private int minimumIntensity;
-    private int maximumIntensity;
+    private double minimumIntensity;
+    private double maximumIntensity;
 }

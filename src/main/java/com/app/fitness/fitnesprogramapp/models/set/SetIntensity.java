@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SetIntensity {
-    private int minimumIntensity;
-    private int maximumIntensity;
+    private double minimumIntensity;
+    private double maximumIntensity;
 }
