@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class NextWorkoutIntensityMetricInfoDTO { // Renamed
     private Long id;
-    private int minimumIntensity;
-    private int maximumIntensity;
+    private double minimumIntensity;
+    private double maximumIntensity;
     private boolean isRange;
     private String title;
     private String metricSymbol;

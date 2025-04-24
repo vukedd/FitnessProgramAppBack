@@ -10,6 +10,6 @@ public class CreateDoneSetDTO {
     private Long workoutExerciseId;
     private Long setId;
     private int volume;
-    private int intensity;
+    private double intensity;
     private Double weightLifted;
 }

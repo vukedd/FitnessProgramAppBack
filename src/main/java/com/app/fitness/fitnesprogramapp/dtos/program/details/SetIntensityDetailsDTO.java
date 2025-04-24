@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SetIntensityDetailsDTO {
-    private int minimumIntensity;
-    private int maximumIntensity;
+    private double minimumIntensity;
+    private double maximumIntensity;
 }

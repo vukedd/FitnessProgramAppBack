@@ -9,6 +9,6 @@ public class UpdateWorkoutExerciseSetDTO {
     private int volumeMax;
     private Long volumeMetric;
     private Long intensityMetric;
-    private int intensityMin;
-    private int intensityMax;
+    private double intensityMin;
+    private double intensityMax;
 }

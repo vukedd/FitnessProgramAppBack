@@ -23,7 +23,7 @@ public class DoneSet {
 
     private int volume;
 
-    private int intensity;
+    private double intensity;
 
     private Date date;
 
