@@ -1,10 +1,7 @@
 package com.app.fitness.fitnesprogramapp.exceptions.handler;
 
 import com.app.fitness.fitnesprogramapp.dtos.ErrorResponseDto;
-import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.LoginException;
-import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.RegisterException;
-import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.ValidationException;
-import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.VerificationException;
+import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -92,5 +89,24 @@ public class FitnessProgramExceptionHandler {
         }
 
         return new ResponseEntity<>(new ErrorResponseDto(errorMessage, ex.getErrorType().name()), status);
+    }
+
+    @ExceptionHandler(PasswordChangeException.class)
+    public ResponseEntity<ErrorResponseDto> handleAuthenticationException(PasswordChangeException ex) {
+        HttpStatus status;
+        String errorMessage = "";
+        switch (ex.getErrorType()) {
+            case INVALID_CREDENTIALS, WEAK_PASSWORD:
+                status = HttpStatus.BAD_REQUEST;
+                errorMessage = ex.getMessage();
+                break;
+            default:
+                status = HttpStatus.INTERNAL_SERVER_ERROR;
+                errorMessage = "Internal server error";
+                break;
+        }
+
+        return new ResponseEntity<>(new ErrorResponseDto(errorMessage, ex.getErrorType().name()), status);
+
     }
 }
