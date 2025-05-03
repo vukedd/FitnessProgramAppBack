@@ -131,4 +131,11 @@ public class ProgramController {
     public ResponseEntity<byte[]> getProgramImage(@PathVariable Long id) {
         return ResponseEntity.ok(programService.getProgramImage(id));
     }
+
+    @GetMapping("/my-programs/{refreshTokenId}")
+    public ResponseEntity<Page<ProgramOverviewDTO>> getMyPrograms(@PathVariable("refreshTokenId") String refreshTokenId,
+                                                                  @PageableDefault(size = 4, sort = "followers_number",
+                                                                          direction = Sort.Direction.DESC) Pageable programsPage) {
+        return ResponseEntity.ok(programService.getProgramsCreatedByMe(refreshTokenId, programsPage));
+    }
 }
