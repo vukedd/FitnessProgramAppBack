@@ -8,4 +8,5 @@ import lombok.NoArgsConstructor;
 public class ExerciseOverviewDto {
     private Long id;
     private String title;
+    private String link;
 }

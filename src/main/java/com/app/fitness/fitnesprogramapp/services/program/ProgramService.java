@@ -184,7 +184,6 @@ public class ProgramService {
         workoutDetailsDTO.setId(workout.getId());
         workoutDetailsDTO.setTitle(workout.getTitle());
         workoutDetailsDTO.setDescription(workout.getDescription());
-        workoutDetailsDTO.setNumber(workout.getNumber());
         workoutDetailsDTO.setWorkoutExercises(mapWorkoutExercisesToDetailsDTOs(workout.getWorkoutExercises()));
         return workoutDetailsDTO;
     }
@@ -210,6 +209,7 @@ public class ProgramService {
         exerciseDetailsDTO.setId(exercise.getId());
         exerciseDetailsDTO.setTitle(exercise.getTitle());
         exerciseDetailsDTO.setDescription(exercise.getDescription());
+        exerciseDetailsDTO.setLink(exercise.getLink());
         return exerciseDetailsDTO;
     }
 
@@ -285,7 +285,6 @@ public class ProgramService {
         Workout workout = new Workout();
         workout.setTitle(workoutDTO.getTitle());
         workout.setDescription(workoutDTO.getDescription());
-        workout.setNumber(workoutDTO.getNumber());
         workout.setPosition(position);
 
         List<WorkoutExercise> workoutExercises = new ArrayList<>();
@@ -466,7 +465,6 @@ public class ProgramService {
             // Update workout details
             workout.setTitle(workoutDTO.getTitle());
             workout.setDescription(workoutDTO.getDescription());
-            workout.setNumber(workoutDTO.getNumber());
             workout.setPosition(i);
 
             // Replace all workout exercises with new ones

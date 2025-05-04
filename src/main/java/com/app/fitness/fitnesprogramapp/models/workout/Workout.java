@@ -15,7 +15,6 @@ public class Workout {
 
     private String title;
     private String description;
-    private String number;
 
     private Integer position;
 

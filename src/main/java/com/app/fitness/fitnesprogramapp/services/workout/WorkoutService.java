@@ -108,7 +108,6 @@ public class WorkoutService {
         // Copy basic properties
         startedWorkout.setTitle(workout.getTitle());
         startedWorkout.setDescription(workout.getDescription());
-        startedWorkout.setNumber(workout.getNumber());
         startedWorkout.setWorkoutId(workout.getId()); // Store the original workout ID
 
         startedWorkout.setWorkoutExercises(new ArrayList<>());
@@ -266,7 +265,6 @@ public class WorkoutService {
                 .workoutId(workout.getId())
                 .title(workout.getTitle())
                 .description(workout.getDescription())
-                .number(workout.getNumber())
                 .workoutExercises(programService.mapWorkoutExercisesToDetailsDTOs(workout.getWorkoutExercises()))
                 .doneSets(new ArrayList<>())
                 .finished(false)
@@ -579,7 +577,6 @@ public class WorkoutService {
                 .workoutId(startedWorkout.getWorkoutId())
                 .title(startedWorkout.getTitle())
                 .description(startedWorkout.getDescription())
-                .number(startedWorkout.getNumber())
                 .workoutExercises(sortedExercises)
                 .doneSets(mapDoneSetsToNextWorkoutDoneSetDTOs(startedWorkout.getDoneSets()))
                 .startDate(startedWorkout.getStartDate())
@@ -664,6 +661,7 @@ public class WorkoutService {
         return NextWorkoutExerciseBaseDTO.builder()
                 .id(exercise.getId())
                 .title(exercise.getTitle())
+                .link(exercise.getLink())
                 .description(exercise.getDescription())
                 .exerciseMuscles(exercise.getExerciseMuscles().stream()
                         .map(this::mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO)

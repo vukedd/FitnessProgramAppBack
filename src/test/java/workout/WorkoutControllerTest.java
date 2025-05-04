@@ -150,7 +150,6 @@ class WorkoutControllerTest {
         testWorkout = new Workout();
         testWorkout.setTitle("Test Workout");
         testWorkout.setDescription("Test Workout Description");
-        testWorkout.setNumber("1");
         testWorkout.setWorkoutExercises(new ArrayList<>());
         testWorkout = workoutRepository.save(testWorkout);
 
@@ -241,7 +240,6 @@ class WorkoutControllerTest {
                 workoutDTO.setId(workout.getId());
                 workoutDTO.setTitle(workout.getTitle());
                 workoutDTO.setDescription(workout.getDescription());
-                workoutDTO.setNumber(workout.getNumber());
 
                 List<UpdateWorkoutExerciseDTO> exerciseDTOs = new ArrayList<>();
                 for (WorkoutExercise we : workout.getWorkoutExercises()) {
@@ -302,7 +300,6 @@ class WorkoutControllerTest {
         assertEquals(testWorkout.getId(), details.getWorkoutId());
         assertEquals(testWorkout.getTitle(), details.getTitle());
         assertEquals(testWorkout.getDescription(), details.getDescription());
-        assertEquals(testWorkout.getNumber(), details.getNumber());
     }
 
     @Test
@@ -522,7 +519,6 @@ class WorkoutControllerTest {
         Workout secondWorkout = new Workout();
         secondWorkout.setTitle("Second Workout");
         secondWorkout.setDescription("Second Workout Description");
-        secondWorkout.setNumber("1");
         secondWorkout.setWorkoutExercises(new ArrayList<>());
         secondWorkout = workoutRepository.save(secondWorkout);
 

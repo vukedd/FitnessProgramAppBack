@@ -16,7 +16,6 @@ public class NextWorkoutDetailsDTO { // Renamed
     private Long id;
     private String title;
     private String description;
-    private String number;
     private Long workoutId;
     private List<WorkoutExerciseDetailsDTO> workoutExercises;
     private List<NextWorkoutDoneSetDTO> doneSets; // Renamed type

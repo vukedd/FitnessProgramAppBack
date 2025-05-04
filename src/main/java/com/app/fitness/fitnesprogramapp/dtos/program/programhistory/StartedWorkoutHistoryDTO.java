@@ -13,7 +13,6 @@ public class StartedWorkoutHistoryDTO {
     private Long id;
     private String title;
     private String description;
-    private String number;
     private boolean finished;
     private List<WorkoutExerciseHistoryDTO> workoutExercises;
 }

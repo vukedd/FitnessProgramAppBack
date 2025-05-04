@@ -11,4 +11,5 @@ public class ExerciseDetailsDTO {
     private Long id;
     private String title;
     private String description;
+    private String link;
 }

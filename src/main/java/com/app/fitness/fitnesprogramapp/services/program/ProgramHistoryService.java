@@ -104,7 +104,6 @@ public class ProgramHistoryService {
         dto.setId(startedWorkout.getId());
         dto.setTitle(startedWorkout.getTitle());
         dto.setDescription(startedWorkout.getDescription());
-        dto.setNumber(startedWorkout.getNumber());
         dto.setFinished(startedWorkout.isFinished());
 
         dto.setWorkoutExercises(new ArrayList<>());

@@ -8,6 +8,5 @@ import java.util.List;
 public class WorkoutDTO {
     private String title;
     private String description;
-    private String number;
     private List<WorkoutExerciseDTO> workoutExercises;
 }
