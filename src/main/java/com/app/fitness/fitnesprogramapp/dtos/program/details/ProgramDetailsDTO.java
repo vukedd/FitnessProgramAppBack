@@ -9,6 +9,8 @@ import java.util.List;
 public class ProgramDetailsDTO {
     private Long id;
 
+    private boolean isCreatedByUser;
+
     private String name;
 
     private UserProgramDetailsDTO creator;
@@ -18,4 +20,6 @@ public class ProgramDetailsDTO {
     private double rating;
 
     private List<WeekDetailsDTO> weeks;
+
+
 }

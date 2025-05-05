@@ -121,14 +121,29 @@ public class ProgramController {
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProgramDetailsDTO> getProgramById(@PathVariable Long id) {
+    public ResponseEntity<ProgramDetailsDTO> getProgramById(@PathVariable Long id,
+                                                            Authentication authentication) {
         //add authentication here
-        ProgramDetailsDTO program = programService.getProgramDetails(id);
+        String username = authentication.getName();
+        ProgramDetailsDTO program = programService.getProgramDetails(id,username);
         return ResponseEntity.ok(program);
     }
 
     @GetMapping("/image/{id}")
     public ResponseEntity<byte[]> getProgramImage(@PathVariable Long id) {
         return ResponseEntity.ok(programService.getProgramImage(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteProgram(@PathVariable Long id, Authentication authentication) {
+        // Get current authenticated user
+        String username = authentication.getName();
+
+        // Delete the program
+        programService.deleteProgram(id, username);
+
+        // Return success response
+        return ResponseEntity.ok()
+                .body(Map.of("message", "Program deleted successfully"));
     }
 }

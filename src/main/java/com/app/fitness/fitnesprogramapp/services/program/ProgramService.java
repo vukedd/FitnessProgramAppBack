@@ -5,6 +5,7 @@ import com.app.fitness.fitnesprogramapp.dtos.program.details.*;
 import com.app.fitness.fitnesprogramapp.dtos.program.startprogram.StartProgramResponseDTO;
 import com.app.fitness.fitnesprogramapp.dtos.program.update.*;
 import com.app.fitness.fitnesprogramapp.dtos.user.UserProgramDetailsDTO;
+import com.app.fitness.fitnesprogramapp.exceptions.customExceptions.ProgramNotFoundException;
 import com.app.fitness.fitnesprogramapp.models.exercise.Exercise;
 import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
 import com.app.fitness.fitnesprogramapp.models.program.*;
@@ -67,7 +68,7 @@ public class ProgramService {
         User user = userRepository.findByUsername(username).orElseThrow();
         List<ProgramOverviewDTO> programDTOs = user.getStartedPrograms().stream()
                 .map(startedProgram -> {
-                    Program program = startedProgram.getProgram();
+                    Program program = programRepository.findById(startedProgram.getProgramId()).orElse(null);
                     return ProgramOverviewDTO.fromEntity(program, startedProgram.getId());
                 })
                 .toList();
@@ -125,23 +126,26 @@ public class ProgramService {
     }
 
     public byte[] getProgramImage(Long programId) {
-        Program program=programRepository.findById(programId).orElseThrow(() -> new RuntimeException("Program not found"));
+        Program program=programRepository.findById(programId).orElse(null);
+        if (program==null) {
+            return null;
+        }
         return program.getImageData();
     }
 
-    public ProgramDetailsDTO getProgramDetails(Long id) {
+    public ProgramDetailsDTO getProgramDetails(Long id,String username) {
         Program program = programRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Program not found"));
-        return mapProgramToDetailsDTO(program);
+                .orElseThrow(() -> new ProgramNotFoundException("Program not found"));
+        return mapProgramToDetailsDTO(program,username);
     }
 
-    private ProgramDetailsDTO mapProgramToDetailsDTO(Program program) {
+    private ProgramDetailsDTO mapProgramToDetailsDTO(Program program,String username) {
         ProgramDetailsDTO programDetailsDTO = new ProgramDetailsDTO();
         programDetailsDTO.setId(program.getId());
         programDetailsDTO.setName(program.getTitle());
         programDetailsDTO.setFollowersNumber(program.getFollowersNumber());
         programDetailsDTO.setRating(program.getRating());
-
+        programDetailsDTO.setCreatedByUser(username.equals(program.getCreator().getUsername()));
         // Map creator
         programDetailsDTO.setCreator(mapUserToProgramDetailsDTO(program.getCreator()));
 
@@ -361,7 +365,7 @@ public class ProgramService {
         Program program=programRepository.findById(programId).orElseThrow(() -> new RuntimeException("Program not found!"));
         User user=userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found!"));
         StartedProgram startedProgram=new StartedProgram();
-        startedProgram.setProgram(program);
+        startedProgram.setProgramId(program.getId());
         startedProgram.setStartDate(new Date());
         startedProgramRepository.save(startedProgram);
         user.getStartedPrograms().add(startedProgram);
@@ -569,5 +573,19 @@ public class ProgramService {
         set.setIntensity(intensity);
 
         return setRepository.save(set);
+    }
+
+    public void deleteProgram(Long programId, String username) {
+        // Find the program
+        Program program = programRepository.findById(programId)
+                .orElseThrow(() -> new RuntimeException("Program not found with id: " + programId));
+
+        // Check if the user is the owner of the program
+        if (!program.getCreator().getUsername().equals(username)) {
+            throw new RuntimeException("You don't have permission to delete this program");
+        }
+
+        // Delete the program
+        programRepository.delete(program);
     }
 }

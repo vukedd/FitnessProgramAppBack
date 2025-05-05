@@ -46,7 +46,7 @@ public class Program {
         return 0.0;
     }
 
-    @OneToMany
+    @OneToMany(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "week_id")
     )

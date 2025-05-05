@@ -213,7 +213,7 @@ class WorkoutControllerTest {
 
         // Create started program
         startedProgram = new StartedProgram();
-        startedProgram.setProgram(testProgram);
+        startedProgram.setProgramId(testProgram.getId());
         startedProgram.setStartDate(new Date());
         startedProgram.setFinished(false);
         startedProgram.setStartedWeeks(new ArrayList<>());

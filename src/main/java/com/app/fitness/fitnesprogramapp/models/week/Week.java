@@ -13,7 +13,7 @@ public class Week {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToMany
+    @OneToMany(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "workout_id")
     )
