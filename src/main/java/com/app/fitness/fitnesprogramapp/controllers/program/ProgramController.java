@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -130,5 +131,13 @@ public class ProgramController {
     @GetMapping("/image/{id}")
     public ResponseEntity<byte[]> getProgramImage(@PathVariable Long id) {
         return ResponseEntity.ok(programService.getProgramImage(id));
+    }
+
+    @GetMapping("/my-programs")
+    public ResponseEntity<Page<ProgramOverviewDTO>> getMyPrograms(@RequestParam("refreshTokenId") String refreshTokenId,
+                                                                  @RequestParam("title") String title,
+                                                                  @PageableDefault(size = 4, sort = "followers_number",
+                                                                          direction = Sort.Direction.DESC) Pageable programsPage) {
+        return ResponseEntity.ok(programService.getProgramsCreatedByMe(refreshTokenId, title, programsPage));
     }
 }

@@ -572,4 +572,9 @@ public class ProgramService {
 
         return setRepository.save(set);
     }
+
+    public Page<ProgramOverviewDTO> getProgramsCreatedByMe(String refreshTokenId, String title, Pageable pageable) {
+        Page<Program> programsCreatedByMe = programRepository.findProgramsCreatedByMe(refreshTokenId, title, pageable);
+        return programsCreatedByMe.map(ProgramOverviewDTO :: fromEntity);
+    }
 }
