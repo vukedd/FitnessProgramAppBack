@@ -588,4 +588,8 @@ public class ProgramService {
         // Delete the program
         programRepository.delete(program);
     }
+    public Page<ProgramOverviewDTO> getProgramsCreatedByMe(String refreshTokenId, String title, Pageable pageable) {
+        Page<Program> programsCreatedByMe = programRepository.findProgramsCreatedByMe(refreshTokenId, title, pageable);
+        return programsCreatedByMe.map(ProgramOverviewDTO :: fromEntity);
+    }
 }
