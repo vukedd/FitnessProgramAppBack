@@ -12,6 +12,8 @@ public class ProgramDetailsDTO {
     private boolean isCreatedByUser;
 
     private String name;
+    private boolean isPublic;
+    private String description;
 
     private UserProgramDetailsDTO creator;
 
