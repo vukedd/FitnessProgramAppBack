@@ -109,4 +109,9 @@ public class FitnessProgramExceptionHandler {
         return new ResponseEntity<>(new ErrorResponseDto(errorMessage, ex.getErrorType().name()), status);
 
     }
+
+    @ExceptionHandler(ProgramNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleProgramNotFoundException(ProgramNotFoundException ex) {
+        return new ResponseEntity<>(new ErrorResponseDto(ex.getMessage(), "NOT_FOUND"), HttpStatus.NOT_FOUND);
+    }
 }

@@ -20,7 +20,6 @@ public class StartedWorkout {
 
     private String title;
     private String description;
-    private String number;
 
     private Long workoutId;
 

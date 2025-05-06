@@ -22,6 +22,7 @@ import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
 import com.app.fitness.fitnesprogramapp.models.workout.Workout;
 import com.app.fitness.fitnesprogramapp.repositories.exercise.ExerciseRepository;
 import com.app.fitness.fitnesprogramapp.repositories.exercise.WorkoutExerciseRepository;
+import com.app.fitness.fitnesprogramapp.repositories.program.ProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.program.StartedProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.DoneSetRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.SetRepository;
@@ -51,6 +52,7 @@ public class WorkoutService {
     private final ProgramService programService; // For workout exercise mapping
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
+    private final ProgramRepository programRepository;
 
     /**
      * Processes the next workout request for a given program ID
@@ -108,7 +110,6 @@ public class WorkoutService {
         // Copy basic properties
         startedWorkout.setTitle(workout.getTitle());
         startedWorkout.setDescription(workout.getDescription());
-        startedWorkout.setNumber(workout.getNumber());
         startedWorkout.setWorkoutId(workout.getId()); // Store the original workout ID
 
         startedWorkout.setWorkoutExercises(new ArrayList<>());
@@ -171,7 +172,8 @@ public class WorkoutService {
 
         if (!latestStartedWeek.isFinished()) {
             // Week is not finished, look for the next workout to do in this week
-            return getNextWorkoutInWeek(latestStartedWeek, startedProgram.getProgram(),startedProgram);
+
+            return getNextWorkoutInWeek(latestStartedWeek, startedProgram);
         } else {
             // Current week is finished, start next week
             return startNextWeek(startedProgram);
@@ -181,15 +183,18 @@ public class WorkoutService {
     /**
      * Gets the next workout to do in the current week
      * @param startedWeek The current week
-     * @param program The program containing the week
      * @return NextWorkoutDTO with the next workout and action
      */
-    private NextWorkoutDTO getNextWorkoutInWeek(StartedWeek startedWeek, Program program,StartedProgram startedProgram) {
+    private NextWorkoutDTO getNextWorkoutInWeek(StartedWeek startedWeek, StartedProgram startedProgram) {
         // Get the original week from program using weekId
+        Program program=programRepository.findById(startedProgram.getProgramId()).orElse(null);
+        Optional<Week> optionalWeek=Optional.empty();
+        if (program!=null) {
+            optionalWeek = program.getWeeks().stream()
+                    .filter(w -> w.getId().equals(startedWeek.getWeekId()))
+                    .findFirst();
+        }
 
-        Optional<Week> optionalWeek = program.getWeeks().stream()
-                .filter(w -> w.getId().equals(startedWeek.getWeekId()))
-                .findFirst();
 
         List<Workout> originalWeekWorkouts;
         originalWeekWorkouts = optionalWeek.map(week -> week.getWorkouts().stream().sorted(Comparator.comparing(Workout::getPosition)).toList()).orElseGet(ArrayList::new);
@@ -266,7 +271,6 @@ public class WorkoutService {
                 .workoutId(workout.getId())
                 .title(workout.getTitle())
                 .description(workout.getDescription())
-                .number(workout.getNumber())
                 .workoutExercises(programService.mapWorkoutExercisesToDetailsDTOs(workout.getWorkoutExercises()))
                 .doneSets(new ArrayList<>())
                 .finished(false)
@@ -279,8 +283,14 @@ public class WorkoutService {
      * @return NextWorkoutDTO with the first workout
      */
     private NextWorkoutDTO startFirstWeek(StartedProgram startedProgram) {
-        Program program = startedProgram.getProgram();
-        List<Week> programWeeks = program.getWeeks();
+        Program program = programRepository.findById(startedProgram.getProgramId()).orElse(null);
+        List<Week> programWeeks;
+        if (program == null) {
+            programWeeks=new ArrayList<>();
+        }
+        else {
+            programWeeks=program.getWeeks();
+        }
 
         if (programWeeks.isEmpty()) {
             return NextWorkoutDTO.builder()
@@ -324,8 +334,14 @@ public class WorkoutService {
      * @return NextWorkoutDTO with the first workout of the next week
      */
     private NextWorkoutDTO startNextWeek(StartedProgram startedProgram) {
-        Program program = startedProgram.getProgram();
-        List<Week> programWeeks = program.getWeeks();
+        Program program = programRepository.findById(startedProgram.getProgramId()).orElse(null);
+        List<Week> programWeeks;
+        if (program == null) {
+            programWeeks=new ArrayList<>();
+        }
+        else {
+            programWeeks=program.getWeeks();
+        }
 
         // Collect IDs of all weeks that have already been started
         java.util.Set<Long> startedWeekIds = startedProgram.getStartedWeeks().stream()
@@ -420,7 +436,8 @@ public class WorkoutService {
         startedWorkout = startedWorkoutRepository.save(startedWorkout);
 
         // Check if this was the last workout in the week
-        checkWeekCompletion(startedWeek, startedProgram.getProgram());
+
+        checkWeekCompletion(startedProgram,startedWeek);
 
         // Check if this was the last week in the program
         if (startedWeek.isFinished()) {
@@ -433,13 +450,16 @@ public class WorkoutService {
     /**
      * Checks if all workouts in a week have been completed
      * @param startedWeek The week to check
-     * @param program The program containing the week
      */
-    private void checkWeekCompletion(StartedWeek startedWeek, Program program) {
+    private void checkWeekCompletion(StartedProgram startedProgram,StartedWeek startedWeek) {
         // Get the original week from program using weekId
-        Optional<Week> optionalWeek = program.getWeeks().stream()
-                .filter(w -> w.getId().equals(startedWeek.getWeekId()))
-                .findFirst();
+        Program program=programRepository.findById(startedProgram.getProgramId()).orElse(null);
+        Optional<Week> optionalWeek=Optional.empty();
+        if (program!=null) {
+            optionalWeek = program.getWeeks().stream()
+                    .filter(w -> w.getId().equals(startedWeek.getWeekId()))
+                    .findFirst();
+        }
         List<Workout> originalWeekWorkouts;
         originalWeekWorkouts = optionalWeek.map(week -> week.getWorkouts().stream().sorted(Comparator.comparing(Workout::getPosition)).toList()).orElseGet(ArrayList::new);
 
@@ -467,8 +487,14 @@ public class WorkoutService {
      * @param startedProgram The program to check
      */
     private void checkProgramCompletion(StartedProgram startedProgram) {
-        Program program = startedProgram.getProgram();
-        List<Week> programWeeks = program.getWeeks();
+        Program program = programRepository.findById(startedProgram.getProgramId()).orElse(null);
+        List<Week> programWeeks;
+        if(program==null) {
+            programWeeks=new ArrayList<>();
+        }
+        else {
+            programWeeks=program.getWeeks();
+        }
         List<StartedWeek> startedWeeks = startedProgram.getStartedWeeks();
 
         // Collect IDs of all weeks that have been started and finished
@@ -579,7 +605,6 @@ public class WorkoutService {
                 .workoutId(startedWorkout.getWorkoutId())
                 .title(startedWorkout.getTitle())
                 .description(startedWorkout.getDescription())
-                .number(startedWorkout.getNumber())
                 .workoutExercises(sortedExercises)
                 .doneSets(mapDoneSetsToNextWorkoutDoneSetDTOs(startedWorkout.getDoneSets()))
                 .startDate(startedWorkout.getStartDate())
@@ -664,6 +689,7 @@ public class WorkoutService {
         return NextWorkoutExerciseBaseDTO.builder()
                 .id(exercise.getId())
                 .title(exercise.getTitle())
+                .link(exercise.getLink())
                 .description(exercise.getDescription())
                 .exerciseMuscles(exercise.getExerciseMuscles().stream()
                         .map(this::mapExerciseMuscleToNextWorkoutExerciseMuscleLinkDTO)

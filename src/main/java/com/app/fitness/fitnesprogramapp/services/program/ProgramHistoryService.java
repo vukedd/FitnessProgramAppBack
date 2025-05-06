@@ -8,15 +8,19 @@ import com.app.fitness.fitnesprogramapp.dtos.program.programhistory.WorkoutExerc
 import com.app.fitness.fitnesprogramapp.dtos.volume.DailyVolumeReportDTO;
 import com.app.fitness.fitnesprogramapp.dtos.volume.DailyWorkoutDurationReportDTO;
 import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
+import com.app.fitness.fitnesprogramapp.models.program.Program;
 import com.app.fitness.fitnesprogramapp.models.program.StartedProgram;
 import com.app.fitness.fitnesprogramapp.models.set.DoneSet;
 import com.app.fitness.fitnesprogramapp.models.set.Set;
+import com.app.fitness.fitnesprogramapp.models.user.User;
 import com.app.fitness.fitnesprogramapp.models.week.StartedWeek;
 import com.app.fitness.fitnesprogramapp.models.week.Week;
 import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
 import com.app.fitness.fitnesprogramapp.models.workout.Workout;
+import com.app.fitness.fitnesprogramapp.repositories.program.ProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.program.StartedProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.DoneSetRepository;
+import com.app.fitness.fitnesprogramapp.repositories.user.UserRepository;
 import com.app.fitness.fitnesprogramapp.repositories.week.WeekRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,19 +42,42 @@ public class ProgramHistoryService {
     private final DoneSetRepository doneSetRepository;
     private final WorkoutRepository workoutRepository;
     private final WeekRepository weekRepository;
+    private final ProgramRepository programRepository;
+    private final UserRepository userRepository;
 
     public ProgramHistoryDTO getProgramHistory(Long startedProgramId, String username) {
+        User user=userRepository.findByUsername(username).orElseThrow();
+        Optional<StartedProgram> startedProgramOpt = user.getStartedPrograms().stream().filter(
+                sp->sp.getId().equals(startedProgramId)
+        ).findFirst();
+
+        if (startedProgramOpt.isEmpty()) {
+            return null;
+        }
+        Program program = programRepository.findById(startedProgramOpt.get().getProgramId()).orElse(null);
         ProgramHistoryDTO programHistoryDTO = new ProgramHistoryDTO();
         StartedProgram startedProgram= startedProgramRepository.findById(startedProgramId).orElseThrow();
         programHistoryDTO.setStartedProgramId(startedProgram.getId());
-        programHistoryDTO.setProgramId(startedProgram.getProgram().getId());
-        programHistoryDTO.setTitle(startedProgram.getProgram().getTitle());
+        programHistoryDTO.setProgramId(null);
+        if(program!=null) {
+            programHistoryDTO.setProgramId(startedProgram.getProgramId());
+        }
+        if(program!=null) {
+            programHistoryDTO.setTitle(program.getTitle());
+        }
         programHistoryDTO.setStartedWeeks(new ArrayList<>());
         programHistoryDTO.setWeeks(new ArrayList<>());
 
         List<StartedWeek> startedWeeks=startedProgram.getStartedWeeks();
         java.util.Set<Long> startedWeekSet = startedWeeks.stream().map(StartedWeek::getId).collect(Collectors.toSet());
-        List<Week> allWeeks=startedProgram.getProgram().getWeeks();
+        List<Week> allWeeks;
+        if(program!=null) {
+            allWeeks=program.getWeeks();
+        }
+        else {
+            allWeeks=new ArrayList<>();
+        }
+
 
         for(StartedWeek startedWeek:startedWeeks){
             programHistoryDTO.getStartedWeeks().add(mapStartedWeekToStartedWeekHistoryDTO(startedWeek));
@@ -104,7 +131,6 @@ public class ProgramHistoryService {
         dto.setId(startedWorkout.getId());
         dto.setTitle(startedWorkout.getTitle());
         dto.setDescription(startedWorkout.getDescription());
-        dto.setNumber(startedWorkout.getNumber());
         dto.setFinished(startedWorkout.isFinished());
 
         dto.setWorkoutExercises(new ArrayList<>());
@@ -120,7 +146,7 @@ public class ProgramHistoryService {
             // Find and map done sets for this exercise
             List<DoneSet> doneSetsForExercise = startedWorkout.getDoneSets().stream()
                     .filter(doneSet -> doneSet.getWorkoutExercise().getId().equals(exercise.getId()))
-                    .collect(Collectors.toList());
+                    .toList();
 
             // Map done sets
             for (DoneSet doneSet : doneSetsForExercise) {
@@ -133,7 +159,7 @@ public class ProgramHistoryService {
             // Track which sets have been done already
             List<Long> doneSetIds = doneSetsForExercise.stream()
                     .map(doneSet -> doneSet.getSet().getId())
-                    .collect(Collectors.toList());
+                    .toList();
 
             // Add remaining sets that haven't been done yet
             for (Set set : allSets) {

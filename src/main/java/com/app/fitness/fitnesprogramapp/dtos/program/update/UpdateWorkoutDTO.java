@@ -9,6 +9,5 @@ public class UpdateWorkoutDTO {
     private Long id;
     private String title;
     private String description;
-    private String number;
     private List<UpdateWorkoutExerciseDTO> workoutExercises;
 }

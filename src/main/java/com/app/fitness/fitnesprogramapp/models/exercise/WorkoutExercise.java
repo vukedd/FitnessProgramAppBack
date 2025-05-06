@@ -19,7 +19,7 @@ public class WorkoutExercise {
     @JoinColumn(name = "exercise_id", referencedColumnName = "id")
     private Exercise exercise;
 
-    @OneToMany
+    @OneToMany(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "set_id")
     )

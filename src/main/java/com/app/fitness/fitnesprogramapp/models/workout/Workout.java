@@ -15,11 +15,10 @@ public class Workout {
 
     private String title;
     private String description;
-    private String number;
 
     private Integer position;
 
-    @OneToMany
+    @OneToMany(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "workout_exercise_id")
     )

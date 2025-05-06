@@ -29,6 +29,17 @@ public class ProgramOverviewDTO {
         );
     }
     public static ProgramOverviewDTO fromEntity(Program program,Long startedProgramId) {
+        if(program==null){
+            return new ProgramOverviewDTO(
+                    null,
+                    "Deleted program",
+                    null,
+                    null,
+                    0,
+                    null,
+                    startedProgramId
+            );
+        }
         return new ProgramOverviewDTO(
                 program.getId(),
                 program.getTitle(),

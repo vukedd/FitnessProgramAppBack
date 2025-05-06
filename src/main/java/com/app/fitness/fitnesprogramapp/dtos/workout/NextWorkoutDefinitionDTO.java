@@ -14,6 +14,5 @@ public class NextWorkoutDefinitionDTO { // Renamed
     private Long id;
     private String title;
     private String description;
-    private String number;
     private List<NextWorkoutExerciseDefinitionDTO> workoutExercises; // Renamed type
 }

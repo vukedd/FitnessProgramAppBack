@@ -122,9 +122,11 @@ public class ProgramController {
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProgramDetailsDTO> getProgramById(@PathVariable Long id) {
+    public ResponseEntity<ProgramDetailsDTO> getProgramById(@PathVariable Long id,
+                                                            Authentication authentication) {
         //add authentication here
-        ProgramDetailsDTO program = programService.getProgramDetails(id);
+        String username = authentication.getName();
+        ProgramDetailsDTO program = programService.getProgramDetails(id,username);
         return ResponseEntity.ok(program);
     }
 
@@ -133,11 +135,24 @@ public class ProgramController {
         return ResponseEntity.ok(programService.getProgramImage(id));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteProgram(@PathVariable Long id, Authentication authentication) {
+        // Get current authenticated user
+        String username = authentication.getName();
+
+        // Delete the program
+        programService.deleteProgram(id, username);
+
+        // Return success response
+        return ResponseEntity.ok()
+                .body(Map.of("message", "Program deleted successfully"));
+    }
+
     @GetMapping("/my-programs")
     public ResponseEntity<Page<ProgramOverviewDTO>> getMyPrograms(@RequestParam("refreshTokenId") String refreshTokenId,
-                                                                  @RequestParam("title") String title,
-                                                                  @PageableDefault(size = 4, sort = "followers_number",
-                                                                          direction = Sort.Direction.DESC) Pageable programsPage) {
+            @RequestParam("title") String title,
+            @PageableDefault(size = 4, sort = "followers_number",
+                    direction = Sort.Direction.DESC) Pageable programsPage) {
         return ResponseEntity.ok(programService.getProgramsCreatedByMe(refreshTokenId, title, programsPage));
     }
 }

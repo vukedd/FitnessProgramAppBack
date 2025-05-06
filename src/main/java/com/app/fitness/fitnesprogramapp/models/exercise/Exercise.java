@@ -14,16 +14,16 @@ public class Exercise {
     private Long id;
     private String title;
     private String description;
+    private String link;
+    @ManyToOne
+    @JoinColumn(name = "equipment_id")
+    private Equipment equipment;
+
+    @ManyToOne
+    @JoinColumn(name = "training_type_id")
+    private TrainingType trainingType;
 
     @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExerciseMuscle> exerciseMuscles = new ArrayList<>();
 
-    // Method to add a muscle with intensity
-    public void addMuscle(Muscle muscle, Integer intensity) {
-        ExerciseMuscle exerciseMuscle = new ExerciseMuscle();
-        exerciseMuscle.setExercise(this);
-        exerciseMuscle.setMuscle(muscle);
-        exerciseMuscle.setIntensity(intensity);
-        exerciseMuscles.add(exerciseMuscle);
-    }
 }

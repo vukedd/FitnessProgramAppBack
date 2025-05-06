@@ -37,6 +37,7 @@ public class ExerciseService {
         ExerciseOverviewDto exerciseOverviewDto = new ExerciseOverviewDto();
         exerciseOverviewDto.setId(exercise.getId());
         exerciseOverviewDto.setTitle(exercise.getTitle());
+        exerciseOverviewDto.setLink(exercise.getLink());
         return exerciseOverviewDto;
     }
 
