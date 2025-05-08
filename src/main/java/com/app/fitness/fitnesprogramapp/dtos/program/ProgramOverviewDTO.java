@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 public class ProgramOverviewDTO {
     private Long id;
     private String name;
-    private byte[] imageData;
     private String creatorUsername;
     private int followersNumber;
     private Double rating;
@@ -21,7 +20,6 @@ public class ProgramOverviewDTO {
         return new ProgramOverviewDTO(
                 program.getId(),
                 program.getTitle(),
-                program.getImageData(),
                 program.getCreator().getUsername(),
                 program.getFollowersNumber(),
                 program.getRating(),
@@ -34,7 +32,6 @@ public class ProgramOverviewDTO {
                     null,
                     "Deleted program",
                     null,
-                    null,
                     0,
                     null,
                     startedProgramId
@@ -43,7 +40,6 @@ public class ProgramOverviewDTO {
         return new ProgramOverviewDTO(
                 program.getId(),
                 program.getTitle(),
-                program.getImageData(),
                 program.getCreator().getUsername(),
                 program.getFollowersNumber(),
                 program.getRating(),

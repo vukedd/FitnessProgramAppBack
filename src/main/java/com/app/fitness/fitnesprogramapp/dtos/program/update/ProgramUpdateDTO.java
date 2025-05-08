@@ -8,5 +8,7 @@ import java.util.List;
 public class ProgramUpdateDTO {
     private Long id;
     private String name;
+    private boolean isPublic;
+    private String description;
     private List<UpdateWeekDTO> weeks;
 }

@@ -16,6 +16,9 @@ public class Program {
     private Long id;
 
     private String title;
+    private boolean isPublic;
+    private String description;
+
 
     @Lob
     @Column(length = 1000000)

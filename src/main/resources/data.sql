@@ -6,23 +6,23 @@ VALUES
     (2, 'jane_smith','sifra','jane','smith', 'jane@example.com', false),
     (3, 'mike_wilson','sifra','mike','wilson', 'mike@example.com', false);
 
-insert into fitnessprogramapp.program (followers_number, creator_id, id, title, image_data)
-values  (1000, 1, 1, 'Program 1', 0x89504E470D0A1A0A),
-        (2000, 1, 2, 'Program 2', 0x474946383961),
-        (3000, 2, 3, 'Program 3', 0x89504E470D0A1A0A),
-        (4000, 2, 4, 'Program 4', 0x474946383961),
-        (5000, 3, 5, 'Program 5', 0x89504E470D0A1A0A),
-        (1000, 1, 6, 'Program 6', 0x89504E470D0A1A0A),
-        (2000, 1, 7, 'Program 7', 0x474946383961),
-        (3000, 2, 8, 'Program 8', 0x89504E470D0A1A0A),
-        (4000, 2, 9, 'Program 9', 0x474946383961),
-        (5000, 3, 10, 'Program 10', 0x89504E470D0A1A0A),
-        (1000, 1, 11, 'Program 11', 0x89504E470D0A1A0A),
-        (2000, 1, 12, 'Program 12', 0x474946383961),
-        (3000, 2, 13, 'Program 13', 0x89504E470D0A1A0A),
-        (4000, 2, 14, 'Program 14', 0x474946383961),
-        (5000, 3, 15, 'Program 15', 0x89504E470D0A1A0A),
-        (0, 1, 16, 'asdfas', null);
+insert into fitnessprogramapp.program (followers_number, creator_id, id, title, image_data,is_public)
+values  (1000, 1, 1, 'Program 1', 0x89504E470D0A1A0A,true),
+        (2000, 1, 2, 'Program 2', 0x474946383961,true),
+        (3000, 2, 3, 'Program 3', 0x89504E470D0A1A0A,true),
+        (4000, 2, 4, 'Program 4', 0x474946383961,true),
+        (5000, 3, 5, 'Program 5', 0x89504E470D0A1A0A,true),
+        (1000, 1, 6, 'Program 6', 0x89504E470D0A1A0A,true),
+        (2000, 1, 7, 'Program 7', 0x474946383961,true),
+        (3000, 2, 8, 'Program 8', 0x89504E470D0A1A0A,true),
+        (4000, 2, 9, 'Program 9', 0x474946383961,true),
+        (5000, 3, 10, 'Program 10', 0x89504E470D0A1A0A,true),
+        (1000, 1, 11, 'Program 11', 0x89504E470D0A1A0A,true),
+        (2000, 1, 12, 'Program 12', 0x474946383961,true),
+        (3000, 2, 13, 'Program 13', 0x89504E470D0A1A0A,true),
+        (4000, 2, 14, 'Program 14', 0x474946383961,true),
+        (5000, 3, 15, 'Program 15', 0x89504E470D0A1A0A,true),
+        (0, 1, 16, 'asdfas', null,true);
 
 ALTER TABLE program AUTO_INCREMENT = 17; -- Adjusted based on highest ID inserted
 ALTER TABLE users AUTO_INCREMENT = 5; -- Adjusted based on highest ID inserted

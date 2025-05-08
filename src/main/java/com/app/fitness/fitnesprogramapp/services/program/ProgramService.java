@@ -78,14 +78,15 @@ public class ProgramService {
         return new PageImpl<>(programDTOs, pageable, programDTOs.size());
     }
 
-    public ProgramCreateDTO convertJsonToDTO(String programJson)  {
+    public ProgramCreateDTO convertJsonToDTO(String programJson) {
         try {
             return objectMapper.readValue(programJson, ProgramCreateDTO.class);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
-    public ProgramUpdateDTO convertJsonToUpdateDTO(String programJson)  {
+
+    public ProgramUpdateDTO convertJsonToUpdateDTO(String programJson) {
         try {
             return objectMapper.readValue(programJson, ProgramUpdateDTO.class);
         } catch (JsonProcessingException e) {
@@ -94,7 +95,7 @@ public class ProgramService {
     }
 
     @Transactional
-    public Program createProgram(ProgramCreateDTO programDTO, MultipartFile image, String username)  {
+    public Program createProgram(ProgramCreateDTO programDTO, MultipartFile image, String username) {
         // Get current user
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -102,6 +103,8 @@ public class ProgramService {
         // Create new program
         Program program = new Program();
         program.setTitle(programDTO.getName());
+        program.setDescription(programDTO.getDescription());
+        program.setPublic(programDTO.isPublic());
         program.setCreator(currentUser);
         program.setFollowersNumber(0);
 
@@ -126,23 +129,25 @@ public class ProgramService {
     }
 
     public byte[] getProgramImage(Long programId) {
-        Program program=programRepository.findById(programId).orElse(null);
-        if (program==null) {
+        Program program = programRepository.findById(programId).orElse(null);
+        if (program == null) {
             return null;
         }
         return program.getImageData();
     }
 
-    public ProgramDetailsDTO getProgramDetails(Long id,String username) {
+    public ProgramDetailsDTO getProgramDetails(Long id, String username) {
         Program program = programRepository.findById(id)
                 .orElseThrow(() -> new ProgramNotFoundException("Program not found"));
-        return mapProgramToDetailsDTO(program,username);
+        return mapProgramToDetailsDTO(program, username);
     }
 
-    private ProgramDetailsDTO mapProgramToDetailsDTO(Program program,String username) {
+    private ProgramDetailsDTO mapProgramToDetailsDTO(Program program, String username) {
         ProgramDetailsDTO programDetailsDTO = new ProgramDetailsDTO();
         programDetailsDTO.setId(program.getId());
         programDetailsDTO.setName(program.getTitle());
+        programDetailsDTO.setDescription(program.getDescription());
+        programDetailsDTO.setPublic(program.isPublic());
         programDetailsDTO.setFollowersNumber(program.getFollowersNumber());
         programDetailsDTO.setRating(program.getRating());
         programDetailsDTO.setCreatedByUser(username.equals(program.getCreator().getUsername()));
@@ -274,9 +279,9 @@ public class ProgramService {
         Week week = new Week();
         List<Workout> workouts = new ArrayList<>();
 
-        int i=0;
+        int i = 0;
         for (WorkoutDTO workoutDTO : weekDTO.getWorkouts()) {
-            Workout workout = createWorkout(workoutDTO,i);
+            Workout workout = createWorkout(workoutDTO, i);
             workouts.add(workout);
             i++;
         }
@@ -285,16 +290,16 @@ public class ProgramService {
         return weekRepository.save(week);
     }
 
-    private Workout createWorkout(WorkoutDTO workoutDTO,int position) {
+    private Workout createWorkout(WorkoutDTO workoutDTO, int position) {
         Workout workout = new Workout();
         workout.setTitle(workoutDTO.getTitle());
         workout.setDescription(workoutDTO.getDescription());
         workout.setPosition(position);
 
         List<WorkoutExercise> workoutExercises = new ArrayList<>();
-        int i=0;
+        int i = 0;
         for (WorkoutExerciseDTO exerciseDTO : workoutDTO.getWorkoutExercises()) {
-            WorkoutExercise workoutExercise = createWorkoutExercise(exerciseDTO,i);
+            WorkoutExercise workoutExercise = createWorkoutExercise(exerciseDTO, i);
             workoutExercises.add(workoutExercise);
             i++;
         }
@@ -303,7 +308,7 @@ public class ProgramService {
         return workoutRepository.save(workout);
     }
 
-    private WorkoutExercise createWorkoutExercise(WorkoutExerciseDTO exerciseDTO,int position) {
+    private WorkoutExercise createWorkoutExercise(WorkoutExerciseDTO exerciseDTO, int position) {
         WorkoutExercise workoutExercise = new WorkoutExercise();
 
         // Get exercise by ID
@@ -360,22 +365,18 @@ public class ProgramService {
     }
 
 
-
-    public StartProgramResponseDTO startProgram(Long programId,String username) {
-        Program program=programRepository.findById(programId).orElseThrow(() -> new RuntimeException("Program not found!"));
-        User user=userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found!"));
-        StartedProgram startedProgram=new StartedProgram();
+    public StartProgramResponseDTO startProgram(Long programId, String username) {
+        Program program = programRepository.findById(programId).orElseThrow(() -> new RuntimeException("Program not found!"));
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found!"));
+        StartedProgram startedProgram = new StartedProgram();
         startedProgram.setProgramId(program.getId());
         startedProgram.setStartDate(new Date());
         startedProgramRepository.save(startedProgram);
         user.getStartedPrograms().add(startedProgram);
         userRepository.save(user);
-        return new StartProgramResponseDTO(startedProgram.getId(),program.getTitle());
+        return new StartProgramResponseDTO(startedProgram.getId(), program.getTitle());
 
     }
-
-
-
 
 
     @Transactional
@@ -395,6 +396,8 @@ public class ProgramService {
 
         // Update program details
         program.setTitle(programDTO.getName());
+        program.setPublic(programDTO.isPublic());
+        program.setDescription(programDTO.getDescription());
 
         // Process image if provided
         if (image != null && !image.isEmpty()) {
@@ -403,8 +406,7 @@ public class ProgramService {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        }
-        else {
+        } else {
             program.setImageData(null);
         }
 
@@ -415,7 +417,7 @@ public class ProgramService {
     }
 
     private void updateProgramWeeks(Program program, List<UpdateWeekDTO> weekDTOs) {
-        List<Week> existingWeeks = program.getWeeks();
+        List<Week> existingWeeks = new ArrayList<>(program.getWeeks());
         List<Week> updatedWeeks = new ArrayList<>();
 
         // Process all weeks from the DTO
@@ -429,15 +431,19 @@ public class ProgramService {
             updatedWeeks.add(week);
         }
 
-        // Remove weeks that are no longer present
+        // Clear the list first to avoid orphan deletion issues
+        program.getWeeks().clear();
+
+        // Add all updated weeks
+        program.getWeeks().addAll(updatedWeeks);
+
+        // Now remove weeks that are no longer needed
         List<Week> weeksToRemove = existingWeeks.stream()
                 .filter(week -> updatedWeeks.stream()
                         .noneMatch(updatedWeek -> updatedWeek.getId().equals(week.getId())))
                 .toList();
 
         weekRepository.deleteAll(weeksToRemove);
-
-        program.setWeeks(updatedWeeks);
     }
 
     private Week findOrCreateWeek(List<Week> existingWeeks, UpdateWeekDTO weekDTO) {
@@ -457,11 +463,11 @@ public class ProgramService {
     }
 
     private void updateWeekWorkouts(Week week, List<UpdateWorkoutDTO> workoutDTOs) {
-        List<Workout> existingWorkouts = week.getWorkouts();
+        List<Workout> existingWorkouts = new ArrayList<>(week.getWorkouts());
         List<Workout> updatedWorkouts = new ArrayList<>();
 
         // Process all workouts from the DTO
-        int i=0;
+        int i = 0;
         for (UpdateWorkoutDTO workoutDTO : workoutDTOs) {
             // Try to find existing workout by ID
             Workout workout = findOrCreateWorkout(existingWorkouts, workoutDTO);
@@ -478,15 +484,19 @@ public class ProgramService {
             i++;
         }
 
-        // Remove workouts that are no longer present
+        // Clear the list first to avoid orphan deletion issues
+        week.getWorkouts().clear();
+
+        // Add all updated workouts
+        week.getWorkouts().addAll(updatedWorkouts);
+
+        // Now remove workouts that are no longer needed
         List<Workout> workoutsToRemove = existingWorkouts.stream()
                 .filter(workout -> updatedWorkouts.stream()
                         .noneMatch(updatedWorkout -> updatedWorkout.getId().equals(workout.getId())))
                 .toList();
 
         workoutRepository.deleteAll(workoutsToRemove);
-
-        week.setWorkouts(updatedWorkouts);
     }
 
     private Workout findOrCreateWorkout(List<Workout> existingWorkouts, UpdateWorkoutDTO workoutDTO) {
@@ -506,25 +516,32 @@ public class ProgramService {
     }
 
     private void replaceWorkoutExercises(Workout workout, List<UpdateWorkoutExerciseDTO> exerciseDTOs) {
-        // Delete all existing workout exercises and their sets
-        List<WorkoutExercise> existingExercises = workout.getWorkoutExercises();
+        // Create a copy of existing exercises
+        List<WorkoutExercise> existingExercises = new ArrayList<>(workout.getWorkoutExercises());
+        List<WorkoutExercise> newExercises = new ArrayList<>();
+
+        // Create new workout exercises
+        int i = 0;
+        for (UpdateWorkoutExerciseDTO exerciseDTO : exerciseDTOs) {
+            WorkoutExercise workoutExercise = createNewWorkoutExercise(exerciseDTO, i);
+            newExercises.add(workoutExercise);
+            i++;
+        }
+
+        // Clear the list first to avoid orphan deletion issues
+        workout.getWorkoutExercises().clear();
+
+        // Add all new exercises
+        workout.getWorkoutExercises().addAll(newExercises);
+
+        // Delete all existing workout exercises and their sets that are no longer needed
         for (WorkoutExercise exercise : existingExercises) {
             setRepository.deleteAll(exercise.getSets());
         }
         workoutExerciseRepository.deleteAll(existingExercises);
-
-        // Create new workout exercises
-        List<WorkoutExercise> newExercises = new ArrayList<>();
-        int i=0;
-        for (UpdateWorkoutExerciseDTO exerciseDTO : exerciseDTOs) {
-            WorkoutExercise workoutExercise = createNewWorkoutExercise(exerciseDTO,i);
-            newExercises.add(workoutExercise);
-        }
-
-        workout.setWorkoutExercises(newExercises);
     }
 
-    private WorkoutExercise createNewWorkoutExercise(UpdateWorkoutExerciseDTO exerciseDTO,int position) {
+    private WorkoutExercise createNewWorkoutExercise(UpdateWorkoutExerciseDTO exerciseDTO, int position) {
         WorkoutExercise workoutExercise = new WorkoutExercise();
 
         // Get referenced exercise
@@ -588,8 +605,9 @@ public class ProgramService {
         // Delete the program
         programRepository.delete(program);
     }
+
     public Page<ProgramOverviewDTO> getProgramsCreatedByMe(String refreshTokenId, String title, Pageable pageable) {
         Page<Program> programsCreatedByMe = programRepository.findProgramsCreatedByMe(refreshTokenId, title, pageable);
-        return programsCreatedByMe.map(ProgramOverviewDTO :: fromEntity);
+        return programsCreatedByMe.map(ProgramOverviewDTO::fromEntity);
     }
 }

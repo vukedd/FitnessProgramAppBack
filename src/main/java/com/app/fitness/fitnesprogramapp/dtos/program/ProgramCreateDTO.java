@@ -7,5 +7,7 @@ import java.util.List;
 @Data
 public class ProgramCreateDTO {
     private String name;
+    private boolean isPublic;
+    private String description;
     private List<WeekDTO> weeks;
 }
