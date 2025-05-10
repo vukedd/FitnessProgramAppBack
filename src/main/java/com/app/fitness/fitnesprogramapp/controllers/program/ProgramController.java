@@ -37,7 +37,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/programs")
 @RequiredArgsConstructor
-@CrossOrigin("http://localhost:4200/")
 public class ProgramController {
     private final ProgramService programService;
     private final ProgramHistoryService programHistoryService;

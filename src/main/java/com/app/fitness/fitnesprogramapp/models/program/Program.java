@@ -17,6 +17,8 @@ public class Program {
 
     private String title;
     private boolean isPublic;
+
+    @Column(length = 10000)
     private String description;
 
 
