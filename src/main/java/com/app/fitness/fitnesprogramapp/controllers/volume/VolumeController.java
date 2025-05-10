@@ -20,7 +20,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/volume")
 @RequiredArgsConstructor
-@CrossOrigin("http://localhost:4200/")
 public class VolumeController {
     private final VolumeService volumeService;
     private final ProgramHistoryService programHistoryService;
