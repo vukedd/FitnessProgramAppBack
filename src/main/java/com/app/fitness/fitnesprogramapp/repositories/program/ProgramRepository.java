@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProgramRepository extends JpaRepository<Program, Long> {
-    @Query("SELECT p FROM Program p WHERE p.title LIKE :title")
+    @Query("SELECT p FROM Program p WHERE p.title LIKE :title AND p.isPublic = true")
     Page<Program> searchByTitle(@Param("title") String title, Pageable pageable);
 
     @Query(value = "SELECT followers_number,description, creator_id, p.id, title, image_data, is_public " +
