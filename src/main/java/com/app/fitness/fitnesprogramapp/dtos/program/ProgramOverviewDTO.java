@@ -15,6 +15,7 @@ public class ProgramOverviewDTO {
     private int followersNumber;
     private Double rating;
     private Long startedProgramId;
+    private boolean finished;
 
     public static ProgramOverviewDTO fromEntity(Program program) {
         return new ProgramOverviewDTO(
@@ -23,10 +24,11 @@ public class ProgramOverviewDTO {
                 program.getCreator().getUsername(),
                 program.getFollowersNumber(),
                 program.getRating(),
-                null
+                null,
+                false
         );
     }
-    public static ProgramOverviewDTO fromEntity(Program program,Long startedProgramId) {
+    public static ProgramOverviewDTO fromEntity(Program program,Long startedProgramId,boolean finished) {
         if(program==null){
             return new ProgramOverviewDTO(
                     null,
@@ -34,7 +36,8 @@ public class ProgramOverviewDTO {
                     null,
                     0,
                     null,
-                    startedProgramId
+                    startedProgramId,
+                    finished
             );
         }
         return new ProgramOverviewDTO(
@@ -43,7 +46,9 @@ public class ProgramOverviewDTO {
                 program.getCreator().getUsername(),
                 program.getFollowersNumber(),
                 program.getRating(),
-                startedProgramId
+                startedProgramId,
+                finished
+
         );
     }
 }

@@ -43,7 +43,7 @@ public class ProgramController {
 
     @GetMapping
     public ResponseEntity<Page<ProgramOverviewDTO>> getAllPrograms(
-            @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage
+            @PageableDefault(size = 4, sort = "title", direction = Sort.Direction.ASC) Pageable programsPage
     ) {
         Page<ProgramOverviewDTO> programs = programService.getAllProgramsOverview(programsPage);
         return ResponseEntity.ok(programs);
@@ -51,7 +51,7 @@ public class ProgramController {
 
     @GetMapping("/search")
     public ResponseEntity<Page<ProgramOverviewDTO>> searchPrograms(
-            @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage,
+            @PageableDefault(size = 4, sort = "title", direction = Sort.Direction.ASC) Pageable programsPage,
             @RequestParam("title") String title) {
         Page<ProgramOverviewDTO> programs = programService.searchProgramsByTitle(title, programsPage);
         return ResponseEntity.ok(programs);
@@ -107,7 +107,7 @@ public class ProgramController {
 
     @GetMapping("/started")
     public ResponseEntity<Page<ProgramOverviewDTO>> getStartedPrograms(Authentication authentication,
-                                                                       @PageableDefault(size = 4, sort = "followersNumber", direction = Sort.Direction.DESC) Pageable programsPage) {
+                                                                       @PageableDefault(size = 4, sort = "title", direction = Sort.Direction.ASC) Pageable programsPage) {
         String username = authentication.getName();
         return ResponseEntity.ok(programService.getStartedProgramsOverview(programsPage, username));
 
@@ -150,8 +150,8 @@ public class ProgramController {
     @GetMapping("/my-programs")
     public ResponseEntity<Page<ProgramOverviewDTO>> getMyPrograms(@RequestParam("refreshTokenId") String refreshTokenId,
             @RequestParam("title") String title,
-            @PageableDefault(size = 4, sort = "followers_number",
-                    direction = Sort.Direction.DESC) Pageable programsPage) {
+            @PageableDefault(size = 4, sort = "title",
+                    direction = Sort.Direction.ASC) Pageable programsPage) {
         return ResponseEntity.ok(programService.getProgramsCreatedByMe(refreshTokenId, title, programsPage));
     }
 }

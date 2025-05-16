@@ -69,7 +69,7 @@ public class ProgramService {
         List<ProgramOverviewDTO> programDTOs = user.getStartedPrograms().stream()
                 .map(startedProgram -> {
                     Program program = programRepository.findById(startedProgram.getProgramId()).orElse(null);
-                    return ProgramOverviewDTO.fromEntity(program, startedProgram.getId());
+                    return ProgramOverviewDTO.fromEntity(program, startedProgram.getId(),startedProgram.isFinished());
                 })
                 .toList();
 
