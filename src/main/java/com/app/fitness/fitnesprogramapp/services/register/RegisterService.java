@@ -39,7 +39,36 @@ public class RegisterService {
 
         user = userRepository.save(user);
         String confirmationUrl = "http://localhost:8080/api/auth/verify-email?token=" + token;
-        emailService.sendEmail(user.getEmail(), "Email Verification", "Click the following link to verify your email: \n" + confirmationUrl);
+        String htmlContent = "<html>" +
+                "<body style='font-family: Arial, sans-serif; line-height: 1.6;'>" +
+                "<div style='max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;'>" +
+                "<h2 style='color: #333;'>Welcome, " + user.getFirstName() + "!</h2>" +
+                "<p>Thank you for registering. Please verify your email address by clicking the button below:</p>" +
+                "<p style='text-align: center; margin: 20px 0;'>" +
+                "<a href=\"" + confirmationUrl + "\" " +
+                "style=\"" +
+                "background-color: #007bff; " +
+                "color: white; " +
+                "padding: 12px 25px; " +
+                "text-align: center; " +
+                "text-decoration: none; " +
+                "display: inline-block; " +
+                "border-radius: 5px; " +
+                "font-size: 16px; " +
+                "font-weight: bold; " +
+                "border: none; " +
+                "cursor: pointer;" +
+                "\">" +
+                "Verify Email Address" +
+                "</a>" +
+                "</p>" +
+                "<p>If you're having trouble clicking the button, you can also copy and paste the following link into your web browser:</p>" +
+                "<p><a href=\"" + confirmationUrl + "\">" + confirmationUrl + "</a></p>" +
+                "<p>If you did not request this, please ignore this email.</p>" +
+                "<p>Thanks,<br/>Your Repzly Team</p>" +
+                "</div>" +
+                "</body></html>";
+        emailService.sendEmail(user.getEmail(), "Email Verification", htmlContent);
 
         return new UserRegisterResponseDto(user.getId(), "User successfully registered! We have sent a verification code to your email!", user.getUsername(), user.getEmail(), user.getPassword());
     }
