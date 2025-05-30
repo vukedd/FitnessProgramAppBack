@@ -10,12 +10,12 @@ import java.util.List;
 
 public interface DoneSetRepository extends JpaRepository<DoneSet, Long> {
     @Query(value = "SELECT " +
-            "    DATE(ds.date) as day, " +
+            "    ds.date::date as day, " + // PostgreSQL cast to date
             "    COUNT(ds.id) as sets_count " +
             "FROM " +
             "    users u, users_started_programs usp, started_program sp, " +
             "    started_program_started_weeks spsw, started_week sw, " +
-            "    started_week_started_workouts swsw, started_workout sw2, " +
+            "    started_week_started_workouts swsw, started_workout sw2, " + // sw2 is alias for started_workout
             "    started_workout_done_sets swds, done_sets ds " +
             "WHERE " +
             "    u.id = usp.user_id " +
@@ -27,9 +27,9 @@ public interface DoneSetRepository extends JpaRepository<DoneSet, Long> {
             "    AND sw2.id = swds.started_workout_id " +
             "    AND swds.done_sets_id = ds.id " +
             "    AND u.username = :username " +
-            "    AND ds.date BETWEEN :startDate AND :endDate " +
+            "    AND ds.date BETWEEN :startDate AND :endDate " + // Assuming ds.date is a DATE or TIMESTAMP
             "GROUP BY " +
-            "    DATE(ds.date) " +
+            "    ds.date::date " + // PostgreSQL cast to date
             "ORDER BY " +
             "    day DESC",
             nativeQuery = true)
