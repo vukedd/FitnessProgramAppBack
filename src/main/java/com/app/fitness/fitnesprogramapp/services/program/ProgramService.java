@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -59,8 +60,7 @@ public class ProgramService {
     }
 
     public Page<ProgramOverviewDTO> searchProgramsByTitle(String title, Pageable pageable) {
-        String searchTerm = "%" + title + "%";
-        Page<Program> programPage = programRepository.searchByTitle(searchTerm, pageable);
+        Page<Program> programPage = programRepository.searchByTitle("%"+title+"%", pageable);
         return programPage.map(ProgramOverviewDTO::fromEntity);
     }
 
@@ -606,8 +606,17 @@ public class ProgramService {
         programRepository.delete(program);
     }
 
-    public Page<ProgramOverviewDTO> getProgramsCreatedByMe(String refreshTokenId, String title, Pageable pageable) {
-        Page<Program> programsCreatedByMe = programRepository.findProgramsCreatedByMe(refreshTokenId, title, pageable);
+    public Page<ProgramOverviewDTO> getProgramsCreatedByMe(String userName, String title, Pageable pageable) {
+        Page<Program> programsCreatedByMe;
+
+        if (title == null || title.trim().isEmpty()) {
+            programsCreatedByMe = programRepository.findByCreatorUsername(userName, pageable);
+        } else {
+            programsCreatedByMe = programRepository.findByCreatorUsernameAndTitleContainingIgnoreCase(
+                    userName, title.trim(), pageable);
+        }
+
         return programsCreatedByMe.map(ProgramOverviewDTO::fromEntity);
     }
+
 }

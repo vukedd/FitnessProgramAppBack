@@ -148,10 +148,11 @@ public class ProgramController {
     }
 
     @GetMapping("/my-programs")
-    public ResponseEntity<Page<ProgramOverviewDTO>> getMyPrograms(@RequestParam("refreshTokenId") String refreshTokenId,
+    public ResponseEntity<Page<ProgramOverviewDTO>> getMyPrograms(
             @RequestParam("title") String title,
             @PageableDefault(size = 4, sort = "title",
-                    direction = Sort.Direction.ASC) Pageable programsPage) {
-        return ResponseEntity.ok(programService.getProgramsCreatedByMe(refreshTokenId, title, programsPage));
+                    direction = Sort.Direction.ASC) Pageable programsPage,
+            Authentication authentication) {
+        return ResponseEntity.ok(programService.getProgramsCreatedByMe(authentication.getName(), title, programsPage));
     }
 }

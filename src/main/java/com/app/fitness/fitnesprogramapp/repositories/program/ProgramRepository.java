@@ -10,14 +10,18 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProgramRepository extends JpaRepository<Program, Long> {
+
+    // This JPQL query is already cross-database compatible
     @Query("SELECT p FROM Program p WHERE p.title LIKE :title AND p.isPublic = true")
     Page<Program> searchByTitle(@Param("title") String title, Pageable pageable);
 
-    @Query(value = "SELECT followers_number,description, creator_id, p.id, title, image_data, is_public " +
-            "FROM program p " +
-            "JOIN users u ON u.id = p.creator_id " +
-            "JOIN refresh_tokens rt ON rt.user_id = u.id " +
-            "WHERE rt.id = :id AND rt.expires_at > CURRENT_DATE() AND p.title LIKE CONCAT('%', :title ,'%')",
-            nativeQuery = true)
-    Page<Program> findProgramsCreatedByMe(@Param("id") String refreshTokenId, @Param("title") String title , Pageable pageable);
+    @Query("SELECT p FROM Program p WHERE p.creator.username = :username")
+    Page<Program> findByCreatorUsername(@Param("username") String username, Pageable pageable);
+
+    @Query("SELECT p FROM Program p WHERE p.creator.username = :username AND LOWER(p.title) LIKE LOWER(CONCAT('%', :title, '%'))")
+    Page<Program> findByCreatorUsernameAndTitleContainingIgnoreCase(
+            @Param("username") String username,
+            @Param("title") String title,
+            Pageable pageable);
+
 }
