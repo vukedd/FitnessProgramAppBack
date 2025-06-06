@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,6 +18,7 @@ public class ProgramOverviewDTO {
     private Double rating;
     private Long startedProgramId;
     private boolean finished;
+    private Date latestWorkoutDate;
 
     public static ProgramOverviewDTO fromEntity(Program program) {
         return new ProgramOverviewDTO(
@@ -25,10 +28,11 @@ public class ProgramOverviewDTO {
                 program.getFollowersNumber(),
                 program.getRating(),
                 null,
-                false
+                false,
+                null
         );
     }
-    public static ProgramOverviewDTO fromEntity(Program program,Long startedProgramId,boolean finished) {
+    public static ProgramOverviewDTO fromEntity(Program program, Long startedProgramId, boolean isFinished, Date latestWorkoutDate) {
         if(program==null){
             return new ProgramOverviewDTO(
                     null,
@@ -37,7 +41,8 @@ public class ProgramOverviewDTO {
                     0,
                     null,
                     startedProgramId,
-                    finished
+                    isFinished,
+                    latestWorkoutDate
             );
         }
         return new ProgramOverviewDTO(
@@ -47,8 +52,10 @@ public class ProgramOverviewDTO {
                 program.getFollowersNumber(),
                 program.getRating(),
                 startedProgramId,
-                finished
+                isFinished,
+                latestWorkoutDate
 
         );
     }
+
 }
