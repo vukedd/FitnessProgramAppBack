@@ -12,6 +12,7 @@ import com.app.fitness.fitnesprogramapp.models.program.*;
 import com.app.fitness.fitnesprogramapp.models.set.*;
 import com.app.fitness.fitnesprogramapp.models.user.User;
 import com.app.fitness.fitnesprogramapp.models.week.Week;
+import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
 import com.app.fitness.fitnesprogramapp.models.workout.Workout;
 import com.app.fitness.fitnesprogramapp.repositories.exercise.ExerciseRepository;
 import com.app.fitness.fitnesprogramapp.repositories.exercise.WorkoutExerciseRepository;
@@ -66,14 +67,23 @@ public class ProgramService {
 
     public Page<ProgramOverviewDTO> getStartedProgramsOverview(Pageable pageable, String username) {
         User user = userRepository.findByUsername(username).orElseThrow();
+
         List<ProgramOverviewDTO> programDTOs = user.getStartedPrograms().stream()
                 .map(startedProgram -> {
                     Program program = programRepository.findById(startedProgram.getProgramId()).orElse(null);
-                    return ProgramOverviewDTO.fromEntity(program, startedProgram.getId(),startedProgram.isFinished());
-                })
-                .toList();
 
-        System.out.println("ok");
+                    // Find the latest workout done date for this started program
+                    Date latestWorkoutDate = startedProgram.getStartedWeeks().stream()
+                            .flatMap(week -> week.getStartedWorkouts().stream())
+                            .filter(workout -> workout.getDoneDate() != null) // Only consider completed workouts
+                            .map(StartedWorkout::getDoneDate)
+                            .max(Date::compareTo)
+                            .orElse(new Date(0)); // Use epoch (1970) if no workouts are done
+
+                    return ProgramOverviewDTO.fromEntity(program, startedProgram.getId(), startedProgram.isFinished(), latestWorkoutDate);
+                })
+                .sorted((dto1, dto2) -> dto2.getLatestWorkoutDate().compareTo(dto1.getLatestWorkoutDate())) // Sort newest first
+                .toList();
 
         return new PageImpl<>(programDTOs, pageable, programDTOs.size());
     }

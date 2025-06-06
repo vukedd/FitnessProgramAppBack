@@ -5,6 +5,8 @@ import com.app.fitness.fitnesprogramapp.models.user.User;
 import com.app.fitness.fitnesprogramapp.models.week.Week;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.List;
 
@@ -23,9 +25,11 @@ public class Program {
 
 
     @Lob
-    @Column(length = 1000000)
+    @Column(name = "image_data", columnDefinition = "BYTEA") // Ensures DDL is BYTEA
+    @JdbcTypeCode(SqlTypes.BINARY) // <<-- ADD THIS (or SqlTypes.BLOB)
     @Basic(fetch = FetchType.LAZY)
     private byte[] imageData;
+
 
     @ManyToOne
     private User creator;

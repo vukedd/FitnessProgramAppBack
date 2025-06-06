@@ -21,7 +21,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
         return http.cors().and().csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**","/api/programs/image/**","/api/programs/","/api/volume/per-muscle","/api/workouts/**").permitAll().anyRequest().authenticated()
+                        .requestMatchers("/ping","/api/auth/**","/api/programs/image/**","/api/programs/","/api/volume/per-muscle","/api/workouts/**").permitAll().anyRequest().authenticated()
                 )
                 .sessionManagement(session ->
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
