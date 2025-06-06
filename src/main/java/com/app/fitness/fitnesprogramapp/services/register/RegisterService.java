@@ -38,7 +38,7 @@ public class RegisterService {
         user.setVerificationToken(token);
 
         user = userRepository.save(user);
-        String confirmationUrl = "http://localhost:8080/api/auth/verify-email?token=" + token;
+        String confirmationUrl = "https://repzly-latest.onrender.com/api/auth/verify-email?token=" + token;
         String htmlContent = "<html>" +
                 "<body style='font-family: Arial, sans-serif; line-height: 1.6;'>" +
                 "<div style='max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;'>" +
