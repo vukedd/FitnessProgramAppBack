@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 public interface ProgramRepository extends JpaRepository<Program, Long> {
 
     // This JPQL query is already cross-database compatible
-    @Query("SELECT p FROM Program p WHERE p.title LIKE :title AND p.isPublic = true")
+    @Query("SELECT p FROM Program p WHERE p.title ILIKE :title AND p.isPublic = true")
     Page<Program> searchByTitle(@Param("title") String title, Pageable pageable);
 
     @Query("SELECT p FROM Program p WHERE p.creator.username = :username")
