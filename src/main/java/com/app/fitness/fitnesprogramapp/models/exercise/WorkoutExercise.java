@@ -10,7 +10,8 @@ import java.util.List;
 @Data
 public class WorkoutExercise {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "workout_exercise_seq")
+    @SequenceGenerator(name = "workout_exercise_seq", sequenceName = "workout_exercise_seq", allocationSize = 50)
     private Long id;
 
     private Integer position;
@@ -19,7 +20,7 @@ public class WorkoutExercise {
     @JoinColumn(name = "exercise_id", referencedColumnName = "id")
     private Exercise exercise;
 
-    @OneToMany(cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "set_id")
     )

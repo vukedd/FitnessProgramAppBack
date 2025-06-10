@@ -14,7 +14,7 @@ public class CorsConfig implements WebMvcConfigurer {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")  // Apply to all endpoints
-                        .allowedOrigins("https://repzly.netlify.app/")  // Allow Angular frontend
+                        .allowedOrigins("http://localhost:4200")  // Allow Angular frontend
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);  // Allow sending cookies or Authorization headers

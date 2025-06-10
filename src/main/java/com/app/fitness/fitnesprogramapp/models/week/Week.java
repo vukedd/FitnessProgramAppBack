@@ -10,10 +10,11 @@ import java.util.List;
 @Data
 public class Week {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "week_seq")
+    @SequenceGenerator(name = "week_seq", sequenceName = "week_seq", allocationSize = 50)
     private Long id;
 
-    @OneToMany(cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "workout_id")
     )
