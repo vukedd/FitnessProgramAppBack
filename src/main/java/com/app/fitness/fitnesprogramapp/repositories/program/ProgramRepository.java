@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ProgramRepository extends JpaRepository<Program, Long> {
+public interface ProgramRepository extends JpaRepository<Program, Long>,ProgramRepositoryCustom  {
 
     // This JPQL query is already cross-database compatible
     @Query("SELECT p FROM Program p WHERE p.title ILIKE :title AND p.isPublic = true")
@@ -27,11 +27,8 @@ public interface ProgramRepository extends JpaRepository<Program, Long> {
             @Param("title") String title,
             Pageable pageable);
 
-    @EntityGraph(attributePaths = {
-            "weeks.workouts.workoutExercises.sets.volumeMetric",
-            "weeks.workouts.workoutExercises.sets.intensityMetric",
-            "weeks.workouts.workoutExercises.exercise"
-    })
-    Optional<Program> findFullProgramById(Long id);
+    @Query("SELECT p FROM Program p LEFT JOIN FETCH p.weeks WHERE p.id = :id")
+    Optional<Program> findProgramWithWeeksById(@Param("id") Long id);
+
 
 }
