@@ -10,6 +10,6 @@ import java.util.List;
 
 public interface SetRepository extends JpaRepository<Set, Long> {
     @Modifying
-    @Query("DELETE FROM Set s WHERE s.id IN (SELECT se.id FROM Program p JOIN p.weeks w JOIN w.workouts wo JOIN wo.workoutExercises we JOIN we.sets se WHERE p.id = :programId)")
+    @Query("DELETE FROM Set s WHERE s.workoutExercise.workout.week.program.id = :programId")
     void bulkDeleteByProgramId(@Param("programId") Long programId);
 }

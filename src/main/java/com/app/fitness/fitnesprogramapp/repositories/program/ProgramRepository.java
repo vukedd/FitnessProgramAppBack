@@ -1,6 +1,7 @@
 package com.app.fitness.fitnesprogramapp.repositories.program;
 
 import com.app.fitness.fitnesprogramapp.models.program.Program;
+import com.app.fitness.fitnesprogramapp.models.user.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -27,8 +28,7 @@ public interface ProgramRepository extends JpaRepository<Program, Long>,ProgramR
             @Param("title") String title,
             Pageable pageable);
 
-    @Query("SELECT p FROM Program p LEFT JOIN FETCH p.weeks WHERE p.id = :id")
-    Optional<Program> findProgramWithWeeksById(@Param("id") Long id);
-
+    @Query("SELECT p.creator FROM Program p WHERE p.id = :programId")
+    User findCreatorById(@Param("programId") Long programId);
 
 }

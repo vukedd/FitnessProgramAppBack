@@ -153,9 +153,11 @@ public class ProgramService {
 
         // 3. Build the entire object graph IN MEMORY
         List<Week> weeks = new ArrayList<>();
+        int weekPosition = 0;
         for (WeekDTO weekDTO : programDTO.getWeeks()) {
             Week week = new Week(); // Don't save yet!
-
+            week.setPosition(weekPosition++);
+            week.setProgram(program);
             List<Workout> workouts = new ArrayList<>();
             int workoutPos = 0;
             for (WorkoutDTO workoutDTO : weekDTO.getWorkouts()) {
@@ -163,6 +165,7 @@ public class ProgramService {
                 workout.setTitle(workoutDTO.getTitle());
                 workout.setDescription(workoutDTO.getDescription());
                 workout.setPosition(workoutPos++);
+                workout.setWeek(week);
 
                 List<WorkoutExercise> workoutExercises = new ArrayList<>();
                 int exercisePos = 0;
@@ -172,6 +175,7 @@ public class ProgramService {
                     Exercise exercise = exerciseRepository.findById(exerciseDTO.getExercise())
                             .orElseThrow(() -> new RuntimeException("Exercise not found"));
                     workoutExercise.setExercise(exercise);
+                    workoutExercise.setWorkout(workout);
                     workoutExercise.setMinimumRestTime(exerciseDTO.getMinimumRestTime());
                     workoutExercise.setMaximumRestTime(exerciseDTO.getMaximumRestTime());
                     workoutExercise.setPosition(exercisePos++);
@@ -179,7 +183,7 @@ public class ProgramService {
                     List<Set> sets = new ArrayList<>();
                     for (CreateSetDTO setDTO : exerciseDTO.getSets()) {
                         Set set = new Set(); // Don't save yet!
-
+                        set.setWorkoutExercise(workoutExercise);
                         SetVolume volume = new SetVolume(setDTO.getVolumeMin(), setDTO.getVolumeMax());
                         SetIntensity intensity = new SetIntensity(setDTO.getIntensityMin(), setDTO.getIntensityMax());
                         set.setVolume(volume);
@@ -403,17 +407,35 @@ public class ProgramService {
 
     @Transactional
     public Program updateProgram(Long programId, ProgramUpdateDTO programDTO, MultipartFile image, String username) {
-        // ... existing validation code ...
+        // --- Standard Checks ---
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // STEP 1: LOAD THE ENTIRE PROGRAM GRAPH
-        Program program = programRepository.findAndInitializeById(programId)
-                .orElseThrow(() -> new ProgramNotFoundException("Program not found with ID: " + programId));
-
-        if (!program.getCreator().getUsername().equals(username)) {
+        // We only need the top-level program ID. No need to fetch the graph.
+        if (!programRepository.existsById(programId)) {
+            throw new ProgramNotFoundException("Program not found with ID: " + programId);
+        }
+        User creator = programRepository.findCreatorById(programId); // A simple query to get the creator for the check
+        if (!creator.getId().equals(currentUser.getId())) {
             throw new RuntimeException("You don't have permission to edit this program");
         }
 
-        // STEP 2: UPDATE THE TOP-LEVEL PROGRAM FIELDS
+        // --- STEP 1: FAST, STATELESS BULK DELETE (Bottom-Up) ---
+        // These queries bypass Hibernate's cache and are very fast.
+        setRepository.bulkDeleteByProgramId(programId);
+        workoutExerciseRepository.bulkDeleteByProgramId(programId);
+        workoutRepository.bulkDeleteByProgramId(programId);
+        weekRepository.bulkDeleteByProgramId(programId);
+
+        // --- STEP 2: SYNC HIBERNATE'S PERSISTENCE CONTEXT ---
+        // This is the CRITICAL step. We force Hibernate to acknowledge the changes we made.
+        entityManager.flush(); // Pushes any pending changes (though there shouldn't be any)
+        entityManager.clear(); // Wipes the persistence context, discarding all stale entity data.
+
+        // --- STEP 3: RE-FETCH THE PARENT ENTITY & UPDATE ---
+        // Now we get a clean, fresh Program object that knows it has no children.
+        Program program = programRepository.findById(programId).get();
+
         program.setTitle(programDTO.getName());
         program.setPublic(programDTO.isPublic());
         program.setDescription(programDTO.getDescription());
@@ -429,37 +451,23 @@ public class ProgramService {
         }
 
 
-
-        // --- STEP 2: UPDATE THE TOP-LEVEL PROGRAM FIELDS ---
-        program.setTitle(programDTO.getName());
-        program.setPublic(programDTO.isPublic());
-        program.setDescription(programDTO.getDescription());
-
-        // STEP 6: CLEAR THE COLLECTIONS TO KEEP JPA STATE CONSISTENT
-        for(Week week:program.getWeeks()){
-            for(Workout workout:week.getWorkouts()){
-                for(WorkoutExercise workoutExercise:workout.getWorkoutExercises()){
-                    workoutExercise.getSets().clear();
-                }
-                workout.getWorkoutExercises().clear();
-            }
-            week.getWorkouts().clear();
-        }
-        program.getWeeks().clear();
-
         // STEP 7: PRE-FETCH DEPENDENCIES FOR THE NEW GRAPH
         Map<Long, Exercise> exerciseMap = prefetchExercises(programDTO);
         Map<Long, VolumeMetric> volumeMetricsMap = prefetchVolumeMetrics(programDTO);
         Map<Long, IntensityMetric> intensityMetricsMap = prefetchIntensityMetrics(programDTO);
 
         // STEP 8: REBUILD THE ENTIRE GRAPH
+        int weekPosition = 0;
         for (UpdateWeekDTO weekDTO : programDTO.getWeeks()) {
             Week newWeek = new Week();
+            newWeek.setPosition(weekPosition++);
             newWeek.setWorkouts(new ArrayList<>());
+            newWeek.setProgram(program);
 
             int workoutPosition = 0;
             for (UpdateWorkoutDTO workoutDTO : weekDTO.getWorkouts()) {
                 Workout newWorkout = new Workout();
+                newWorkout.setWeek(newWeek);
                 newWorkout.setTitle(workoutDTO.getTitle());
                 newWorkout.setDescription(workoutDTO.getDescription());
                 newWorkout.setPosition(workoutPosition++);
@@ -468,6 +476,7 @@ public class ProgramService {
                 int exercisePosition = 0;
                 for (UpdateWorkoutExerciseDTO exerciseDTO : workoutDTO.getWorkoutExercises()) {
                     WorkoutExercise newWorkoutExercise = new WorkoutExercise();
+                    newWorkoutExercise.setWorkout(newWorkout);
                     newWorkoutExercise.setExercise(exerciseMap.get(exerciseDTO.getExercise()));
                     newWorkoutExercise.setMinimumRestTime(exerciseDTO.getMinimumRestTime());
                     newWorkoutExercise.setMaximumRestTime(exerciseDTO.getMaximumRestTime());
@@ -475,7 +484,8 @@ public class ProgramService {
                     newWorkoutExercise.setSets(new ArrayList<>());
 
                     for (UpdateWorkoutExerciseSetDTO setDTO : exerciseDTO.getSets()) {
-                        com.app.fitness.fitnesprogramapp.models.set.Set newSet = new com.app.fitness.fitnesprogramapp.models.set.Set();
+                        Set newSet = new com.app.fitness.fitnesprogramapp.models.set.Set();
+                        newSet.setWorkoutExercise(newWorkoutExercise);
                         newSet.setVolume(new SetVolume(setDTO.getVolumeMin(), setDTO.getVolumeMax()));
                         newSet.setIntensity(new SetIntensity(setDTO.getIntensityMin(), setDTO.getIntensityMax()));
                         newSet.setVolumeMetric(volumeMetricsMap.get(setDTO.getVolumeMetric()));

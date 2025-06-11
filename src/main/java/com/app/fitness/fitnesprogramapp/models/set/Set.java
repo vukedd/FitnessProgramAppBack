@@ -1,5 +1,6 @@
 package com.app.fitness.fitnesprogramapp.models.set;
 
+import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -23,6 +24,11 @@ public class Set {
 
     @ManyToOne
     private IntensityMetric intensityMetric;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workout_exercise_id")
+    private WorkoutExercise workoutExercise;
+
 
 
 }

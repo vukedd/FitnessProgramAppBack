@@ -8,6 +8,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface WeekRepository extends JpaRepository<Week, Long> {
     @Modifying
-    @Query("DELETE FROM Week w WHERE w.id IN (SELECT wk.id FROM Program p JOIN p.weeks wk WHERE p.id = :programId)")
+    @Query("DELETE FROM Week w WHERE w.program.id = :programId")
     void bulkDeleteByProgramId(@Param("programId") Long programId);
 }

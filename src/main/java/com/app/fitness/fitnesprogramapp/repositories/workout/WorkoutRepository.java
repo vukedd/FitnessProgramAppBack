@@ -41,6 +41,6 @@ public interface WorkoutRepository extends JpaRepository<Workout, Long> {
     );
 
     @Modifying
-    @Query("DELETE FROM Workout w WHERE w.id IN (SELECT wo.id FROM Program p JOIN p.weeks wk JOIN wk.workouts wo WHERE p.id = :programId)")
+    @Query("DELETE FROM Workout w WHERE w.week.program.id = :programId")
     void bulkDeleteByProgramId(@Param("programId") Long programId);
 }
