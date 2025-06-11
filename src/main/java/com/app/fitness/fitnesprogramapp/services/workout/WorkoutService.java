@@ -31,6 +31,7 @@ import com.app.fitness.fitnesprogramapp.repositories.week.StartedWeekRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.StartedWorkoutRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
 import com.app.fitness.fitnesprogramapp.services.program.ProgramService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -59,6 +60,7 @@ public class WorkoutService {
      * @param programId The started program ID
      * @return NextWorkoutDTO with details, or null if program not found
      */
+    @Transactional
     public NextWorkoutDTO processNextWorkout(Long programId,String username) {
         User user=userRepository.findByUsername(username).orElseThrow();
         Optional<StartedProgram> startedProgramOpt = user.getStartedPrograms().stream().filter(
@@ -122,6 +124,7 @@ public class WorkoutService {
             exercise.setSets(new ArrayList<>());
             for(Set set: workoutExercise.getSets()) {
                 Set s = new Set();
+                s.setWorkoutExercise(exercise);
                 SetIntensity intensity = new SetIntensity();
                 SetVolume volume = new SetVolume();
                 intensity.setMaximumIntensity(set.getIntensity().getMaximumIntensity());
