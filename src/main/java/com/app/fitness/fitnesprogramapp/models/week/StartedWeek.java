@@ -17,7 +17,10 @@ public class StartedWeek {
 
     private Long weekId;
 
-    @OneToMany
+    @OneToMany(
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<StartedWorkout> startedWorkouts=new ArrayList<>();
 
     private Date startDate;

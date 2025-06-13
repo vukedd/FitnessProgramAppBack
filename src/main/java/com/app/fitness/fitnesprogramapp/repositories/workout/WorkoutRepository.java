@@ -2,12 +2,13 @@ package com.app.fitness.fitnesprogramapp.repositories.workout;
 
 import com.app.fitness.fitnesprogramapp.models.workout.Workout;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface WorkoutRepository extends JpaRepository<Workout, Long> {
+public interface WorkoutRepository extends JpaRepository<Workout, Long>, WorkoutRepositoryCustom {
 
     @Query(value = """
     SELECT
@@ -38,4 +39,8 @@ public interface WorkoutRepository extends JpaRepository<Workout, Long> {
             @Param("startDate") String startDate, // Ensure this string is in 'YYYY-MM-DD' format
             @Param("endDate") String endDate     // Ensure this string is in 'YYYY-MM-DD' format
     );
+
+    @Modifying
+    @Query("DELETE FROM Workout w WHERE w.week.program.id = :programId")
+    void bulkDeleteByProgramId(@Param("programId") Long programId);
 }

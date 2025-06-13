@@ -1,5 +1,6 @@
 package com.app.fitness.fitnesprogramapp.models.review;
 
+import com.app.fitness.fitnesprogramapp.models.program.Program;
 import com.app.fitness.fitnesprogramapp.models.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -23,5 +24,9 @@ public class Review {
     @ManyToOne
     @JoinColumn(name = "reviewerId")
     private User reviewer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "program_id") // This column will be created in the 'week' table
+    private Program program;
 
 }

@@ -1,5 +1,6 @@
 package com.app.fitness.fitnesprogramapp.models.set;
 
+import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -8,7 +9,8 @@ import lombok.Data;
 @Table(name="sets")
 public class Set {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "set_seq")
+    @SequenceGenerator(name = "set_seq", sequenceName = "set_seq", allocationSize = 50)
     private Long id;
 
     @Embedded
@@ -22,6 +24,11 @@ public class Set {
 
     @ManyToOne
     private IntensityMetric intensityMetric;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workout_exercise_id")
+    private WorkoutExercise workoutExercise;
+
 
 
 }

@@ -10,6 +10,7 @@ import com.app.fitness.fitnesprogramapp.models.exercise.Exercise;
 import com.app.fitness.fitnesprogramapp.models.exercise.WorkoutExercise;
 import com.app.fitness.fitnesprogramapp.models.program.*;
 import com.app.fitness.fitnesprogramapp.models.set.*;
+import com.app.fitness.fitnesprogramapp.models.set.Set;
 import com.app.fitness.fitnesprogramapp.models.user.User;
 import com.app.fitness.fitnesprogramapp.models.week.Week;
 import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
@@ -20,11 +21,14 @@ import com.app.fitness.fitnesprogramapp.repositories.metrics.IntensityMetricRepo
 import com.app.fitness.fitnesprogramapp.repositories.metrics.VolumeMetricRepository;
 import com.app.fitness.fitnesprogramapp.repositories.program.*;
 import com.app.fitness.fitnesprogramapp.repositories.set.SetRepository;
+import com.app.fitness.fitnesprogramapp.repositories.startedprogram.StartedProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.user.UserRepository;
 import com.app.fitness.fitnesprogramapp.repositories.week.WeekRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,10 +38,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,6 +56,8 @@ public class ProgramService {
     private final ObjectMapper objectMapper;
     private final StartedProgramRepository startedProgramRepository;
 
+
+
     public Page<ProgramOverviewDTO> getAllProgramsOverview(Pageable pageable) {
         Page<Program> programPage = programRepository.findAll(pageable);
         return programPage.map(ProgramOverviewDTO::fromEntity);
@@ -69,20 +72,12 @@ public class ProgramService {
         User user = userRepository.findByUsername(username).orElseThrow();
 
         List<ProgramOverviewDTO> programDTOs = user.getStartedPrograms().stream()
+                .sorted((sp1, sp2) -> sp2.getStartDate().compareTo(sp1.getStartDate())) // Sort by started date - newest first
                 .map(startedProgram -> {
                     Program program = programRepository.findById(startedProgram.getProgramId()).orElse(null);
 
-                    // Find the latest workout done date for this started program
-                    Date latestWorkoutDate = startedProgram.getStartedWeeks().stream()
-                            .flatMap(week -> week.getStartedWorkouts().stream())
-                            .filter(workout -> workout.getDoneDate() != null) // Only consider completed workouts
-                            .map(StartedWorkout::getDoneDate)
-                            .max(Date::compareTo)
-                            .orElse(new Date(0)); // Use epoch (1970) if no workouts are done
-
-                    return ProgramOverviewDTO.fromEntity(program, startedProgram.getId(), startedProgram.isFinished(), latestWorkoutDate);
+                    return ProgramOverviewDTO.fromEntity(program, startedProgram.getId(), startedProgram.isFinished());
                 })
-                .sorted((dto1, dto2) -> dto2.getLatestWorkoutDate().compareTo(dto1.getLatestWorkoutDate())) // Sort newest first
                 .toList();
 
         return new PageImpl<>(programDTOs, pageable, programDTOs.size());
@@ -106,11 +101,14 @@ public class ProgramService {
 
     @Transactional
     public Program createProgram(ProgramCreateDTO programDTO, MultipartFile image, String username) {
-        // Get current user
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Create new program
+        Map<Long, VolumeMetric> volumeMetricsMap = prefetchVolumeMetrics(programDTO);
+        Map<Long, IntensityMetric> intensityMetricsMap = prefetchIntensityMetrics(programDTO);
+        Map<Long, Exercise> exerciseMap = prefetchExercises(programDTO);
+
+        // 2. Build the main program entity
         Program program = new Program();
         program.setTitle(programDTO.getName());
         program.setDescription(programDTO.getDescription());
@@ -127,14 +125,59 @@ public class ProgramService {
             }
         }
 
-        // Create weeks, workouts, exercises and sets
+        // 3. Build the entire object graph IN MEMORY
         List<Week> weeks = new ArrayList<>();
+        int weekPosition = 0;
         for (WeekDTO weekDTO : programDTO.getWeeks()) {
-            Week week = createWeek(weekDTO);
+            Week week = new Week(); // Don't save yet!
+            week.setPosition(weekPosition++);
+            week.setProgram(program);
+            List<Workout> workouts = new ArrayList<>();
+            int workoutPos = 0;
+            for (WorkoutDTO workoutDTO : weekDTO.getWorkouts()) {
+                Workout workout = new Workout(); // Don't save yet!
+                workout.setTitle(workoutDTO.getTitle());
+                workout.setDescription(workoutDTO.getDescription());
+                workout.setPosition(workoutPos++);
+                workout.setWeek(week);
+
+                List<WorkoutExercise> workoutExercises = new ArrayList<>();
+                int exercisePos = 0;
+                for (WorkoutExerciseDTO exerciseDTO : workoutDTO.getWorkoutExercises()) {
+                    WorkoutExercise workoutExercise = new WorkoutExercise(); // Don't save yet!
+
+                    Exercise exercise = exerciseMap.get(exerciseDTO.getExercise());
+                    workoutExercise.setExercise(exercise);
+                    workoutExercise.setWorkout(workout);
+                    workoutExercise.setMinimumRestTime(exerciseDTO.getMinimumRestTime());
+                    workoutExercise.setMaximumRestTime(exerciseDTO.getMaximumRestTime());
+                    workoutExercise.setPosition(exercisePos++);
+
+                    List<Set> sets = new ArrayList<>();
+                    for (CreateSetDTO setDTO : exerciseDTO.getSets()) {
+                        Set set = new Set();
+                        set.setWorkoutExercise(workoutExercise);
+                        SetVolume volume = new SetVolume(setDTO.getVolumeMin(), setDTO.getVolumeMax());
+                        SetIntensity intensity = new SetIntensity(setDTO.getIntensityMin(), setDTO.getIntensityMax());
+                        set.setVolume(volume);
+                        set.setIntensity(intensity);
+
+                        set.setVolumeMetric(volumeMetricsMap.get(setDTO.getVolumeMetric()));
+                        set.setIntensityMetric(intensityMetricsMap.get(setDTO.getIntensityMetric()));
+
+                        sets.add(set);
+                    }
+                    workoutExercise.setSets(sets);
+                    workoutExercises.add(workoutExercise);
+                }
+                workout.setWorkoutExercises(workoutExercises);
+                workouts.add(workout);
+            }
+            week.setWorkouts(workouts);
             weeks.add(week);
         }
-
         program.setWeeks(weeks);
+
         return programRepository.save(program);
     }
 
@@ -147,7 +190,7 @@ public class ProgramService {
     }
 
     public ProgramDetailsDTO getProgramDetails(Long id, String username) {
-        Program program = programRepository.findById(id)
+        Program program = programRepository.findAndInitializeById(id)
                 .orElseThrow(() -> new ProgramNotFoundException("Program not found"));
         return mapProgramToDetailsDTO(program, username);
     }
@@ -285,63 +328,7 @@ public class ProgramService {
         return intensityMetricDTO;
     }
 
-    private Week createWeek(WeekDTO weekDTO) {
-        Week week = new Week();
-        List<Workout> workouts = new ArrayList<>();
 
-        int i = 0;
-        for (WorkoutDTO workoutDTO : weekDTO.getWorkouts()) {
-            Workout workout = createWorkout(workoutDTO, i);
-            workouts.add(workout);
-            i++;
-        }
-
-        week.setWorkouts(workouts);
-        return weekRepository.save(week);
-    }
-
-    private Workout createWorkout(WorkoutDTO workoutDTO, int position) {
-        Workout workout = new Workout();
-        workout.setTitle(workoutDTO.getTitle());
-        workout.setDescription(workoutDTO.getDescription());
-        workout.setPosition(position);
-
-        List<WorkoutExercise> workoutExercises = new ArrayList<>();
-        int i = 0;
-        for (WorkoutExerciseDTO exerciseDTO : workoutDTO.getWorkoutExercises()) {
-            WorkoutExercise workoutExercise = createWorkoutExercise(exerciseDTO, i);
-            workoutExercises.add(workoutExercise);
-            i++;
-        }
-
-        workout.setWorkoutExercises(workoutExercises);
-        return workoutRepository.save(workout);
-    }
-
-    private WorkoutExercise createWorkoutExercise(WorkoutExerciseDTO exerciseDTO, int position) {
-        WorkoutExercise workoutExercise = new WorkoutExercise();
-
-        // Get exercise by ID
-        Exercise exercise = exerciseRepository.findById(exerciseDTO.getExercise())
-                .orElseThrow(() -> new RuntimeException("Exercise not found with ID: " + exerciseDTO.getExercise()));
-
-        workoutExercise.setExercise(exercise);
-        workoutExercise.setMinimumRestTime(exerciseDTO.getMinimumRestTime());
-        workoutExercise.setMaximumRestTime(exerciseDTO.getMaximumRestTime());
-        workoutExercise.setPosition(position);
-
-        // Create sets
-        List<Set> sets = new ArrayList<>();
-        for (CreateSetDTO setDTO : exerciseDTO.getSets()) {
-            Set set = createWorkoutExerciseSet(
-                    setDTO
-            );
-            sets.add(set);
-        }
-
-        workoutExercise.setSets(sets);
-        return workoutExerciseRepository.save(workoutExercise);
-    }
 
     public Set createWorkoutExerciseSet(
             CreateSetDTO setDTO) {
@@ -391,25 +378,33 @@ public class ProgramService {
 
     @Transactional
     public Program updateProgram(Long programId, ProgramUpdateDTO programDTO, MultipartFile image, String username) {
-        // Get current user
+        // --- Standard Checks ---
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Find the existing program
-        Program program = programRepository.findById(programId)
-                .orElseThrow(() -> new RuntimeException("Program not found"));
-
-        // Check if the current user is the creator of the program
-        if (!program.getCreator().getId().equals(currentUser.getId())) {
+        // We only need the top-level program ID. No need to fetch the graph.
+        if (!programRepository.existsById(programId)) {
+            throw new ProgramNotFoundException("Program not found with ID: " + programId);
+        }
+        User creator = programRepository.findCreatorById(programId); // A simple query to get the creator for the check
+        if (!creator.getId().equals(currentUser.getId())) {
             throw new RuntimeException("You don't have permission to edit this program");
         }
 
-        // Update program details
+        // --- STEP 1: FAST, STATELESS BULK DELETE (Bottom-Up) ---
+        // These queries bypass Hibernate's cache and are very fast.
+        setRepository.bulkDeleteByProgramId(programId);
+        workoutExerciseRepository.bulkDeleteByProgramId(programId);
+
+
+        // --- STEP 3: RE-FETCH THE PARENT ENTITY & UPDATE ---
+        // Now we get a clean, fresh Program object that knows it has no children.
+        Program program = programRepository.findAndInitializeById(programId).get();
+
         program.setTitle(programDTO.getName());
         program.setPublic(programDTO.isPublic());
         program.setDescription(programDTO.getDescription());
 
-        // Process image if provided
         if (image != null && !image.isEmpty()) {
             try {
                 program.setImageData(image.getBytes());
@@ -420,44 +415,47 @@ public class ProgramService {
             program.setImageData(null);
         }
 
-        // Update weeks using patch approach
-        updateProgramWeeks(program, programDTO.getWeeks());
 
-        return programRepository.save(program);
+        // STEP 7: PRE-FETCH DEPENDENCIES FOR THE NEW GRAPH
+        Map<Long, Exercise> exerciseMap = prefetchExercises(programDTO);
+        Map<Long, VolumeMetric> volumeMetricsMap = prefetchVolumeMetrics(programDTO);
+        Map<Long, IntensityMetric> intensityMetricsMap = prefetchIntensityMetrics(programDTO);
+
+        // STEP 8: REBUILD THE ENTIRE GRAPH
+
+        updateProgramWeeks(program,programDTO.getWeeks(),exerciseMap,volumeMetricsMap,intensityMetricsMap);
+
+        return program;
     }
 
-    private void updateProgramWeeks(Program program, List<UpdateWeekDTO> weekDTOs) {
+
+    private void updateProgramWeeks(Program program, List<UpdateWeekDTO> weekDTOs,Map<Long,Exercise> exerciseMap,Map<Long,VolumeMetric> volumeMetricsMap,Map<Long,IntensityMetric> intensityMetricsMap) {
         List<Week> existingWeeks = new ArrayList<>(program.getWeeks());
         List<Week> updatedWeeks = new ArrayList<>();
+        int weekPosition = 0;
 
-        // Process all weeks from the DTO
         for (UpdateWeekDTO weekDTO : weekDTOs) {
-            // Try to find existing week by ID
             Week week = findOrCreateWeek(existingWeeks, weekDTO);
-
-            // Update the week's workouts
-            updateWeekWorkouts(week, weekDTO.getWorkouts());
+            week.setPosition(weekPosition++);
+            if(week.getId()==null){
+                week.setProgram(program);
+            }
+            updateWeekWorkouts(week, weekDTO.getWorkouts(),exerciseMap,volumeMetricsMap,intensityMetricsMap);
 
             updatedWeeks.add(week);
         }
-
-        // Clear the list first to avoid orphan deletion issues
         program.getWeeks().clear();
-
-        // Add all updated weeks
         program.getWeeks().addAll(updatedWeeks);
 
-        // Now remove weeks that are no longer needed
         List<Week> weeksToRemove = existingWeeks.stream()
-                .filter(week -> updatedWeeks.stream()
-                        .noneMatch(updatedWeek -> updatedWeek.getId().equals(week.getId())))
+                .filter(week -> (week!=null && updatedWeeks.stream().filter(uw->uw.getId()!=null)
+                        .noneMatch(updatedWeek -> updatedWeek.getId().equals(week.getId()))))
                 .toList();
 
-        weekRepository.deleteAll(weeksToRemove);
+        weekRepository.deleteAllInBatch(weeksToRemove);
     }
 
     private Week findOrCreateWeek(List<Week> existingWeeks, UpdateWeekDTO weekDTO) {
-        // If ID is provided and exists, update the existing week
         if (weekDTO.getId() != null) {
             for (Week existingWeek : existingWeeks) {
                 if (existingWeek.getId().equals(weekDTO.getId())) {
@@ -465,52 +463,43 @@ public class ProgramService {
                 }
             }
         }
-
-        // If not found or ID is null, create a new week
         Week newWeek = new Week();
         newWeek.setWorkouts(new ArrayList<>());
-        return weekRepository.save(newWeek);
+        return newWeek;
     }
 
-    private void updateWeekWorkouts(Week week, List<UpdateWorkoutDTO> workoutDTOs) {
+    private void updateWeekWorkouts(Week week, List<UpdateWorkoutDTO> workoutDTOs,Map<Long,Exercise> exerciseMap,Map<Long,VolumeMetric> volumeMetricsMap,Map<Long,IntensityMetric> intensityMetricsMap) {
         List<Workout> existingWorkouts = new ArrayList<>(week.getWorkouts());
         List<Workout> updatedWorkouts = new ArrayList<>();
 
-        // Process all workouts from the DTO
         int i = 0;
         for (UpdateWorkoutDTO workoutDTO : workoutDTOs) {
-            // Try to find existing workout by ID
             Workout workout = findOrCreateWorkout(existingWorkouts, workoutDTO);
-
-            // Update workout details
+            if(workout.getId()==null){
+                workout.setWeek(week);
+            }
             workout.setTitle(workoutDTO.getTitle());
             workout.setDescription(workoutDTO.getDescription());
             workout.setPosition(i);
 
-            // Replace all workout exercises with new ones
-            replaceWorkoutExercises(workout, workoutDTO.getWorkoutExercises());
+            replaceWorkoutExercises(workout, workoutDTO.getWorkoutExercises(),exerciseMap,volumeMetricsMap,intensityMetricsMap);
 
-            updatedWorkouts.add(workoutRepository.save(workout));
+            updatedWorkouts.add(workout);
             i++;
         }
 
-        // Clear the list first to avoid orphan deletion issues
         week.getWorkouts().clear();
-
-        // Add all updated workouts
         week.getWorkouts().addAll(updatedWorkouts);
 
-        // Now remove workouts that are no longer needed
         List<Workout> workoutsToRemove = existingWorkouts.stream()
                 .filter(workout -> updatedWorkouts.stream()
                         .noneMatch(updatedWorkout -> updatedWorkout.getId().equals(workout.getId())))
                 .toList();
 
-        workoutRepository.deleteAll(workoutsToRemove);
+        workoutRepository.deleteAllInBatch(workoutsToRemove);
     }
 
     private Workout findOrCreateWorkout(List<Workout> existingWorkouts, UpdateWorkoutDTO workoutDTO) {
-        // If ID is provided and exists, update the existing workout
         if (workoutDTO.getId() != null) {
             for (Workout existingWorkout : existingWorkouts) {
                 if (existingWorkout.getId().equals(workoutDTO.getId())) {
@@ -519,101 +508,153 @@ public class ProgramService {
             }
         }
 
-        // If not found or ID is 0, create a new workout
         Workout newWorkout = new Workout();
         newWorkout.setWorkoutExercises(new ArrayList<>());
         return newWorkout;
     }
 
-    private void replaceWorkoutExercises(Workout workout, List<UpdateWorkoutExerciseDTO> exerciseDTOs) {
-        // Create a copy of existing exercises
-        List<WorkoutExercise> existingExercises = new ArrayList<>(workout.getWorkoutExercises());
+    private void replaceWorkoutExercises(Workout workout, List<UpdateWorkoutExerciseDTO> exerciseDTOs,Map<Long,Exercise> exerciseMap,Map<Long,VolumeMetric> volumeMetricsMap,Map<Long,IntensityMetric> intensityMetricsMap) {
         List<WorkoutExercise> newExercises = new ArrayList<>();
 
-        // Create new workout exercises
         int i = 0;
         for (UpdateWorkoutExerciseDTO exerciseDTO : exerciseDTOs) {
-            WorkoutExercise workoutExercise = createNewWorkoutExercise(exerciseDTO, i);
+            WorkoutExercise workoutExercise = createNewWorkoutExercise(workout,exerciseDTO, i,exerciseMap,volumeMetricsMap,intensityMetricsMap);
             newExercises.add(workoutExercise);
             i++;
         }
 
-        // Clear the list first to avoid orphan deletion issues
         workout.getWorkoutExercises().clear();
-
-        // Add all new exercises
         workout.getWorkoutExercises().addAll(newExercises);
 
-        // Delete all existing workout exercises and their sets that are no longer needed
-        for (WorkoutExercise exercise : existingExercises) {
-            setRepository.deleteAll(exercise.getSets());
-        }
-        workoutExerciseRepository.deleteAll(existingExercises);
     }
 
-    private WorkoutExercise createNewWorkoutExercise(UpdateWorkoutExerciseDTO exerciseDTO, int position) {
+    private WorkoutExercise createNewWorkoutExercise(Workout workout,UpdateWorkoutExerciseDTO exerciseDTO, int position,Map<Long,Exercise> exerciseMap,Map<Long,VolumeMetric> volumeMetricsMap,Map<Long,IntensityMetric> intensityMetricsMap) {
         WorkoutExercise workoutExercise = new WorkoutExercise();
 
-        // Get referenced exercise
-        Exercise exercise = exerciseRepository.findById(exerciseDTO.getExercise())
-                .orElseThrow(() -> new RuntimeException("Exercise not found with ID: " + exerciseDTO.getExercise()));
+        Exercise exercise = exerciseMap.get(exerciseDTO.getExercise());
 
         workoutExercise.setExercise(exercise);
         workoutExercise.setMinimumRestTime(exerciseDTO.getMinimumRestTime());
         workoutExercise.setMaximumRestTime(exerciseDTO.getMaximumRestTime());
         workoutExercise.setPosition(position);
+        workoutExercise.setWorkout(workout);
 
-        // Create new sets
         List<Set> sets = new ArrayList<>();
         for (UpdateWorkoutExerciseSetDTO setDTO : exerciseDTO.getSets()) {
-            Set set = createNewSet(setDTO);
+            Set set = createNewSet(setDTO,volumeMetricsMap,intensityMetricsMap);
+            set.setWorkoutExercise(workoutExercise);
             sets.add(set);
         }
         workoutExercise.setSets(sets);
 
-        return workoutExerciseRepository.save(workoutExercise);
+        return workoutExercise;
     }
 
-    private Set createNewSet(UpdateWorkoutExerciseSetDTO setDTO) {
+    private Set createNewSet(UpdateWorkoutExerciseSetDTO setDTO,Map<Long,VolumeMetric> volumeMetricsMap,Map<Long,IntensityMetric> intensityMetricsMap) {
         Set set = new Set();
 
-        // Get metrics by ID
-        VolumeMetric volumeMetric = volumeMetricRepository.findById(setDTO.getVolumeMetric())
-                .orElseThrow(() -> new RuntimeException("Volume metric not found with ID: " + setDTO.getVolumeMetric()));
+        VolumeMetric volumeMetric = volumeMetricsMap.get(setDTO.getVolumeMetric());
 
-        IntensityMetric intensityMetric = intensityMetricRepository.findById(setDTO.getIntensityMetric())
-                .orElseThrow(() -> new RuntimeException("Intensity metric not found with ID: " + setDTO.getIntensityMetric()));
+        IntensityMetric intensityMetric = intensityMetricsMap.get(setDTO.getIntensityMetric());
 
         set.setVolumeMetric(volumeMetric);
         set.setIntensityMetric(intensityMetric);
 
-        // Create volume
         SetVolume volume = new SetVolume();
         volume.setMinimumVolume(setDTO.getVolumeMin());
         volume.setMaximumVolume(setDTO.getVolumeMax());
         set.setVolume(volume);
 
-        // Create intensity
         SetIntensity intensity = new SetIntensity();
         intensity.setMinimumIntensity(setDTO.getIntensityMin());
         intensity.setMaximumIntensity(setDTO.getIntensityMax());
         set.setIntensity(intensity);
 
-        return setRepository.save(set);
+        return set;
     }
 
-    public void deleteProgram(Long programId, String username) {
-        // Find the program
-        Program program = programRepository.findById(programId)
-                .orElseThrow(() -> new RuntimeException("Program not found with id: " + programId));
 
-        // Check if the user is the owner of the program
-        if (!program.getCreator().getUsername().equals(username)) {
+
+
+    private Map<Long, Exercise> prefetchExercises(ProgramUpdateDTO programDTO) {
+        java.util.Set<Long> ids = programDTO.getWeeks().stream()
+                .flatMap(w -> w.getWorkouts().stream())
+                .flatMap(wo -> wo.getWorkoutExercises().stream())
+                .map(UpdateWorkoutExerciseDTO::getExercise)
+                .collect(Collectors.toSet());
+        return exerciseRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Exercise::getId, e -> e));
+    }
+
+    private Map<Long, VolumeMetric> prefetchVolumeMetrics(ProgramUpdateDTO programDTO) {
+        java.util.Set<Long> ids = programDTO.getWeeks().stream()
+                .flatMap(w -> w.getWorkouts().stream())
+                .flatMap(wo -> wo.getWorkoutExercises().stream())
+                .flatMap(e -> e.getSets().stream())
+                .map(UpdateWorkoutExerciseSetDTO::getVolumeMetric)
+                .collect(Collectors.toSet());
+        return volumeMetricRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(VolumeMetric::getId, vm -> vm));
+    }
+
+    private Map<Long, IntensityMetric> prefetchIntensityMetrics(ProgramUpdateDTO programDTO) {
+        java.util.Set<Long> ids = programDTO.getWeeks().stream()
+                .flatMap(w -> w.getWorkouts().stream())
+                .flatMap(wo -> wo.getWorkoutExercises().stream())
+                .flatMap(e -> e.getSets().stream())
+                .map(UpdateWorkoutExerciseSetDTO::getIntensityMetric)
+                .collect(Collectors.toSet());
+        return intensityMetricRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(IntensityMetric::getId, im -> im));
+    }
+
+    private Map<Long, Exercise> prefetchExercises(ProgramCreateDTO programDTO) {
+        java.util.Set<Long> ids = programDTO.getWeeks().stream()
+                .flatMap(w -> w.getWorkouts().stream())
+                .flatMap(wo -> wo.getWorkoutExercises().stream())
+                .map(WorkoutExerciseDTO::getExercise)
+                .collect(Collectors.toSet());
+        return exerciseRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Exercise::getId, e -> e));
+    }
+
+    private Map<Long, VolumeMetric> prefetchVolumeMetrics(ProgramCreateDTO programDTO) {
+        java.util.Set<Long> ids = programDTO.getWeeks().stream()
+                .flatMap(w -> w.getWorkouts().stream())
+                .flatMap(wo -> wo.getWorkoutExercises().stream())
+                .flatMap(e -> e.getSets().stream())
+                .map(CreateSetDTO::getVolumeMetric)
+                .collect(Collectors.toSet());
+        return volumeMetricRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(VolumeMetric::getId, vm -> vm));
+    }
+
+    private Map<Long, IntensityMetric> prefetchIntensityMetrics(ProgramCreateDTO programDTO) {
+        java.util.Set<Long> ids = programDTO.getWeeks().stream()
+                .flatMap(w -> w.getWorkouts().stream())
+                .flatMap(wo -> wo.getWorkoutExercises().stream())
+                .flatMap(e -> e.getSets().stream())
+                .map(CreateSetDTO::getIntensityMetric)
+                .collect(Collectors.toSet());
+        return intensityMetricRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(IntensityMetric::getId, im -> im));
+    }
+
+    @Transactional
+    public void deleteProgram(Long programId, String username) {
+        if (!programRepository.existsById(programId)) {
+            throw new ProgramNotFoundException("Program not found with ID: " + programId);
+        }
+        User creator = programRepository.findCreatorById(programId);
+        if(!creator.getUsername().equals(username)) {
             throw new RuntimeException("You don't have permission to delete this program");
         }
+        setRepository.bulkDeleteByProgramId(programId);
+        workoutExerciseRepository.bulkDeleteByProgramId(programId);
+        workoutRepository.bulkDeleteByProgramId(programId);
+        weekRepository.bulkDeleteByProgramId(programId);
+        programRepository.deleteById(programId);
 
-        // Delete the program
-        programRepository.delete(program);
     }
 
     public Page<ProgramOverviewDTO> getProgramsCreatedByMe(String userName, String title, Pageable pageable) {

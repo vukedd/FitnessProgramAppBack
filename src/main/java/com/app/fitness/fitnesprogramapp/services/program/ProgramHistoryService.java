@@ -18,7 +18,7 @@ import com.app.fitness.fitnesprogramapp.models.week.Week;
 import com.app.fitness.fitnesprogramapp.models.workout.StartedWorkout;
 import com.app.fitness.fitnesprogramapp.models.workout.Workout;
 import com.app.fitness.fitnesprogramapp.repositories.program.ProgramRepository;
-import com.app.fitness.fitnesprogramapp.repositories.program.StartedProgramRepository;
+import com.app.fitness.fitnesprogramapp.repositories.startedprogram.StartedProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.set.DoneSetRepository;
 import com.app.fitness.fitnesprogramapp.repositories.user.UserRepository;
 import com.app.fitness.fitnesprogramapp.repositories.week.WeekRepository;
@@ -54,9 +54,9 @@ public class ProgramHistoryService {
         if (startedProgramOpt.isEmpty()) {
             return null;
         }
-        Program program = programRepository.findById(startedProgramOpt.get().getProgramId()).orElse(null);
+        Program program = programRepository.findAndInitializeById(startedProgramOpt.get().getProgramId()).orElse(null);
         ProgramHistoryDTO programHistoryDTO = new ProgramHistoryDTO();
-        StartedProgram startedProgram= startedProgramRepository.findById(startedProgramId).orElseThrow();
+        StartedProgram startedProgram= startedProgramRepository.findAndInitializeById(startedProgramId).orElseThrow();
         programHistoryDTO.setStartedProgramId(startedProgram.getId());
         programHistoryDTO.setProgramId(null);
         if(program!=null) {
