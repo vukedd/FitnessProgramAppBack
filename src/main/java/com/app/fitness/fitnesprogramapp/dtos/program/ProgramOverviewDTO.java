@@ -18,7 +18,6 @@ public class ProgramOverviewDTO {
     private Double rating;
     private Long startedProgramId;
     private boolean finished;
-    private Date latestWorkoutDate;
 
     public static ProgramOverviewDTO fromEntity(Program program) {
         return new ProgramOverviewDTO(
@@ -28,11 +27,10 @@ public class ProgramOverviewDTO {
                 program.getFollowersNumber(),
                 program.getRating(),
                 null,
-                false,
-                null
+                false
         );
     }
-    public static ProgramOverviewDTO fromEntity(Program program, Long startedProgramId, boolean isFinished, Date latestWorkoutDate) {
+    public static ProgramOverviewDTO fromEntity(Program program, Long startedProgramId, boolean isFinished) {
         if(program==null){
             return new ProgramOverviewDTO(
                     null,
@@ -41,8 +39,7 @@ public class ProgramOverviewDTO {
                     0,
                     null,
                     startedProgramId,
-                    isFinished,
-                    latestWorkoutDate
+                    isFinished
             );
         }
         return new ProgramOverviewDTO(
@@ -52,9 +49,7 @@ public class ProgramOverviewDTO {
                 program.getFollowersNumber(),
                 program.getRating(),
                 startedProgramId,
-                isFinished,
-                latestWorkoutDate
-
+                isFinished
         );
     }
 

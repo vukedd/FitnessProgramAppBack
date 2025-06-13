@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface WorkoutRepository extends JpaRepository<Workout, Long> {
+public interface WorkoutRepository extends JpaRepository<Workout, Long>, WorkoutRepositoryCustom {
 
     @Query(value = """
     SELECT

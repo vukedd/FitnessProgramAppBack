@@ -21,6 +21,7 @@ import com.app.fitness.fitnesprogramapp.repositories.metrics.IntensityMetricRepo
 import com.app.fitness.fitnesprogramapp.repositories.metrics.VolumeMetricRepository;
 import com.app.fitness.fitnesprogramapp.repositories.program.*;
 import com.app.fitness.fitnesprogramapp.repositories.set.SetRepository;
+import com.app.fitness.fitnesprogramapp.repositories.startedprogram.StartedProgramRepository;
 import com.app.fitness.fitnesprogramapp.repositories.user.UserRepository;
 import com.app.fitness.fitnesprogramapp.repositories.week.WeekRepository;
 import com.app.fitness.fitnesprogramapp.repositories.workout.WorkoutRepository;
@@ -54,8 +55,6 @@ public class ProgramService {
     private final IntensityMetricRepository intensityMetricRepository;
     private final ObjectMapper objectMapper;
     private final StartedProgramRepository startedProgramRepository;
-    @PersistenceContext
-    private EntityManager entityManager;
 
 
 
@@ -73,20 +72,12 @@ public class ProgramService {
         User user = userRepository.findByUsername(username).orElseThrow();
 
         List<ProgramOverviewDTO> programDTOs = user.getStartedPrograms().stream()
+                .sorted((sp1, sp2) -> sp2.getStartDate().compareTo(sp1.getStartDate())) // Sort by started date - newest first
                 .map(startedProgram -> {
                     Program program = programRepository.findById(startedProgram.getProgramId()).orElse(null);
 
-                    // Find the latest workout done date for this started program
-                    Date latestWorkoutDate = startedProgram.getStartedWeeks().stream()
-                            .flatMap(week -> week.getStartedWorkouts().stream())
-                            .filter(workout -> workout.getDoneDate() != null) // Only consider completed workouts
-                            .map(StartedWorkout::getDoneDate)
-                            .max(Date::compareTo)
-                            .orElse(new Date(0)); // Use epoch (1970) if no workouts are done
-
-                    return ProgramOverviewDTO.fromEntity(program, startedProgram.getId(), startedProgram.isFinished(), latestWorkoutDate);
+                    return ProgramOverviewDTO.fromEntity(program, startedProgram.getId(), startedProgram.isFinished());
                 })
-                .sorted((dto1, dto2) -> dto2.getLatestWorkoutDate().compareTo(dto1.getLatestWorkoutDate())) // Sort newest first
                 .toList();
 
         return new PageImpl<>(programDTOs, pageable, programDTOs.size());
@@ -405,10 +396,6 @@ public class ProgramService {
         setRepository.bulkDeleteByProgramId(programId);
         workoutExerciseRepository.bulkDeleteByProgramId(programId);
 
-        // --- STEP 2: SYNC HIBERNATE'S PERSISTENCE CONTEXT ---
-        // This is the CRITICAL step. We force Hibernate to acknowledge the changes we made.
-        entityManager.flush(); // Pushes any pending changes (though there shouldn't be any)
-        entityManager.clear(); // Wipes the persistence context, discarding all stale entity data.
 
         // --- STEP 3: RE-FETCH THE PARENT ENTITY & UPDATE ---
         // Now we get a clean, fresh Program object that knows it has no children.
@@ -461,8 +448,8 @@ public class ProgramService {
         program.getWeeks().addAll(updatedWeeks);
 
         List<Week> weeksToRemove = existingWeeks.stream()
-                .filter(week -> updatedWeeks.stream()
-                        .noneMatch(updatedWeek -> updatedWeek.getId().equals(week.getId())))
+                .filter(week -> (week!=null && updatedWeeks.stream().filter(uw->uw.getId()!=null)
+                        .noneMatch(updatedWeek -> updatedWeek.getId().equals(week.getId()))))
                 .toList();
 
         weekRepository.deleteAllInBatch(weeksToRemove);
@@ -653,18 +640,21 @@ public class ProgramService {
                 .collect(Collectors.toMap(IntensityMetric::getId, im -> im));
     }
 
+    @Transactional
     public void deleteProgram(Long programId, String username) {
-        // Find the program
-        Program program = programRepository.findById(programId)
-                .orElseThrow(() -> new RuntimeException("Program not found with id: " + programId));
-
-        // Check if the user is the owner of the program
-        if (!program.getCreator().getUsername().equals(username)) {
+        if (!programRepository.existsById(programId)) {
+            throw new ProgramNotFoundException("Program not found with ID: " + programId);
+        }
+        User creator = programRepository.findCreatorById(programId);
+        if(!creator.getUsername().equals(username)) {
             throw new RuntimeException("You don't have permission to delete this program");
         }
+        setRepository.bulkDeleteByProgramId(programId);
+        workoutExerciseRepository.bulkDeleteByProgramId(programId);
+        workoutRepository.bulkDeleteByProgramId(programId);
+        weekRepository.bulkDeleteByProgramId(programId);
+        programRepository.deleteById(programId);
 
-        // Delete the program
-        programRepository.delete(program);
     }
 
     public Page<ProgramOverviewDTO> getProgramsCreatedByMe(String userName, String title, Pageable pageable) {

@@ -18,6 +18,10 @@ public class StartedProgram {
     private Long programId;
 
     @OneToMany
+            (
+                    cascade = CascadeType.ALL,
+                    orphanRemoval = true
+            )
     private List<StartedWeek> startedWeeks=new ArrayList<>();
 
     private Date startDate;

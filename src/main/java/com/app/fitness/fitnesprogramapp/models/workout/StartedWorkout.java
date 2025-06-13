@@ -23,10 +23,16 @@ public class StartedWorkout {
 
     private Long workoutId;
 
-    @OneToMany
+    @OneToMany(
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<DoneSet> doneSets=new ArrayList<>();
 
-    @OneToMany
+    @OneToMany(
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     @JoinTable(
             inverseJoinColumns = @JoinColumn(name = "workout_exercise_id")
     )
